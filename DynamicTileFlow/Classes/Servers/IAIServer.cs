@@ -17,7 +17,7 @@ namespace DynamicTileFlow.Classes.Servers
         public string WebTestURL => (IsSSL ? "https" : "http") + "://" + ServerName + ":" + Port.ToString();
         public int AvgRoundTripTotalCalls { get; }
         public int AvgRoundTrip { get; }
-        public int RollingAverageWindow { get; set; }
+        public float MovingAverageAlpha { get; set; }
         public int TotalCalls { get; }
         public int ActiveCalls { get; }
         public bool IsActive { get; }

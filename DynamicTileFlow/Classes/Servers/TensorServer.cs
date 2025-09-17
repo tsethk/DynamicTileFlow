@@ -42,10 +42,11 @@ namespace DynamicTileFlow.Classes.Servers
     {
         public string[] Labels { get; set; }
 
-        public TensorServer(string serverName, int port, string endpoint, bool isSSL, string name, int serverTimeout, int rollingAverageWindow, string[] Labels)
-            : base(serverName, port, endpoint, isSSL, name, serverTimeout, rollingAverageWindow) // Pass required arguments to base constructor
+        public TensorServer(string serverName, int port, string endpoint, bool isSSL, string name, int serverTimeout, float movingAverageAlpha, string[] Labels, int MaxBatchSize)
+            : base(serverName, port, endpoint, isSSL, name, serverTimeout, movingAverageAlpha) // Pass required arguments to base constructor
         {
             this.Labels = Labels;
+            this.MaxBatchSize = MaxBatchSize;
         }
         public override async Task<APIResponse?> CallAPI(List<ImageBatchItem> Images)
         {

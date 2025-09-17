@@ -31,14 +31,14 @@ namespace DynamicTileFlow.Controllers
         private readonly float IouThreshold;
         float ConfidenceThreshold;
 
-        public DetectionController(IConfiguration Configuration, AIServerList ServerList)
+        public DetectionController(IConfiguration Configuration, AIServerList ServerList, List<DynamicTilePlan> DynamicTilePlans)
         {
             this.Configuration = Configuration;
             this.ServerList = ServerList;
+            this.DynamicTilePlans = DynamicTilePlans;
 
             IouThreshold = Configuration.GetValue<float>("IOUThreshold");
             ConfidenceThreshold = Configuration.GetValue<float>("MinConfidence");
-            DynamicTilePlans = Configuration.GetSection("DynamicTilePlans").Get<List<DynamicTilePlan>>() ?? new List<DynamicTilePlan>();
         }
         [HttpGet]
         public IActionResult GetServerStatus()

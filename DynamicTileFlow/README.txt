@@ -175,7 +175,9 @@ AI Servers:
                 "Port": 32168,                          // The port of the AI server
                 "Name": "AI",                           // A friendly name for the server
                 "Type": "CodeProjectAI",                // The type of AI server (currently only CodeProjectAI is supported, Tensor is partially implemented and working in some cases)
-                "TimeoutInSeconds": 2                   // Timeout for requests to this server   
+                "TimeoutInSeconds": 2,                  // Timeout for requests to this server   
+                "IsSSL": false,                         // Indicate if this server uses SSL (https) 
+                "MovingAverageAlpha": 0.1               // Alpha value for calculating moving average of response times (0.0 to 1.0) - lower values give more weight to older requests
             },
             {                                           // You can add multiple AI servers for load balancing, or only a single if you only have one
                 "Endpoint": "/v1/vision/detection",
@@ -183,7 +185,9 @@ AI Servers:
                 "Port": 32168,
                 "Name": "JF",
                 "Type": "CodeProjectAI",
-                "TimeoutInSeconds": 2
+                "TimeoutInSeconds": 2,
+                "IsSSL": false,                         
+                "MovingAverageAlpha": 0.1               
             },
             ...
         ]

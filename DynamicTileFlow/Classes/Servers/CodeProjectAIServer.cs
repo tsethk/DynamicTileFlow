@@ -10,10 +10,10 @@ using static System.Net.Mime.MediaTypeNames;
 namespace DynamicTileFlow.Classes.Servers
 {
 
-    public class YoloServer : AIServer
+    public class CodeProjectAIServer : AIServer
     {
-        public YoloServer(string serverName, int port, string endpoint, bool isSSL, string name, int serverTimeout, int rollingAverageWindow)
-            : base(serverName, port, endpoint, isSSL, name, serverTimeout, rollingAverageWindow) // Pass required arguments to base constructor
+        public CodeProjectAIServer(string serverName, int port, string endpoint, bool isSSL, string name, int serverTimeout, float movingAverageAlpha)
+            : base(serverName, port, endpoint, isSSL, name, serverTimeout, movingAverageAlpha) // Pass required arguments to base constructor
         {
         }
         public override Task<APIResponse?> CallAPI(List<ImageBatchItem> Images)

@@ -1,6 +1,8 @@
 
+using DynamicTileFlow.Classes.DynamicTiler;
 using DynamicTileFlow.Classes.Servers;
 using Microsoft.AspNetCore.Hosting.Server;
+using SixLabors.ImageSharp;
 
 
 namespace ImageTilerProcessor
@@ -17,6 +19,44 @@ namespace ImageTilerProcessor
             // Learn more about configuring Swagger/OpenAPI at https://aka.ms/aspnetcore/swashbuckle
             builder.Services.AddEndpointsApiExplorer();
 
+            var DynamicTilePlans = builder.Configuration
+                .GetSection("DynamicTilePlans")
+                .Get<List<DynamicTilePlan>>() ?? new List<DynamicTilePlan>();
+
+            foreach(var TilePlan in DynamicTilePlans)
+            { 
+                if(TilePlan.ImageWidthExpected <= 0)
+                {
+                    throw new ArgumentOutOfRangeException(nameof(TilePlan.ImageWidthExpected), TilePlan.ImageWidthExpected, $"Dynamic tile plan '{TilePlan.TilePlanName}' must have a positive ImageWidthExpected.");      
+                }
+                if(TilePlan.ImageHeightExpected <= 0)
+                {
+                    throw new ArgumentOutOfRangeException(nameof(TilePlan.ImageHeightExpected), TilePlan.ImageHeightExpected, $"Dynamic tile plan '{TilePlan.TilePlanName}' must have a positive ImageHeightExpected.");   
+                }
+                foreach(var plan in TilePlan.TilePlans)
+                {
+                    if(plan.Height <= 0)
+                    {
+                        throw new ArgumentOutOfRangeException(nameof(plan.Height), plan.Height, $"Dynamic tile plan '{TilePlan.TilePlanName}' has a tile plan with non-positive Height.");  
+                    }
+                    if(plan.Width <= 0)
+                    {
+                        throw new ArgumentOutOfRangeException(nameof(plan.Width), plan.Width, $"Dynamic tile plan '{TilePlan.TilePlanName}' has a tile plan with non-positive Width."); 
+                    }
+                    if(plan.OverlapFactor < 0 || plan.OverlapFactor >= 0.5)
+                    {
+                        throw new ArgumentOutOfRangeException(nameof(plan.OverlapFactor), plan.OverlapFactor, $"Dynamic tile plan '{TilePlan.TilePlanName}' has a tile plan with OverlapFactor out of range (must be >= 0 and < 0.5).");        
+                    }
+                    if(plan.ScaleWidth <= 0)
+                    {
+                        throw new ArgumentOutOfRangeException(nameof(plan.ScaleWidth), plan.ScaleWidth, $"Dynamic tile plan '{TilePlan.TilePlanName}' has a tile plan with non-positive ScaleWidth.");      
+                    }
+                }
+            }   
+
+            builder.Services.AddSingleton<List<DynamicTilePlan>>(DynamicTilePlans);
+
+
             var ServerConfigs = builder.Configuration
                 .GetSection("AIServers")
                 .Get<List<AIServerConfig>>();
@@ -27,17 +67,35 @@ namespace ImageTilerProcessor
             {
                 foreach (var cfg in ServerConfigs)
                 {
+                    if (cfg.MovingAverageAlpha is <= 0 or > 1)
+                        throw new ArgumentOutOfRangeException(
+                            nameof(cfg.MovingAverageAlpha),
+                            cfg.MovingAverageAlpha,
+                            $"Value must be > 0 and <= 1 for server '{cfg.Name}'.");
+
+                    if(cfg.TimeoutInSeconds <= 0)
+                        throw new ArgumentOutOfRangeException(
+                            nameof(cfg.TimeoutInSeconds),
+                            cfg.TimeoutInSeconds,
+                            $"Value must be > 0 for server '{cfg.Name}'.");     
+
+                    if(cfg.Port < 0 || cfg.Port > 65535)
+                        throw new ArgumentOutOfRangeException(
+                            nameof(cfg.Port),
+                            cfg.Port,
+                            $"Value must be between 0 and 65535 for server '{cfg.Name}'.");     
+
                     switch (cfg.Type)
                     {
                         case "CodeProjectAI":
-                            Servers.Add(new YoloServer(
+                            Servers.Add(new CodeProjectAIServer(
                                 cfg.ServerName,
                                 cfg.Port,
                                 cfg.Endpoint,
-                                isSSL: false,                 // or cfg.IsSSL if you add it
+                                cfg.IsSSL,              
                                 cfg.Name,
                                 cfg.TimeoutInSeconds,
-                                rollingAverageWindow: 10
+                                cfg.MovingAverageAlpha
                             ));
                             break;
 
@@ -46,19 +104,20 @@ namespace ImageTilerProcessor
                                 cfg.ServerName,
                                 cfg.Port,
                                 cfg.Endpoint,
-                                isSSL: false,                 // or cfg.IsSSL if you add it
+                                cfg.IsSSL,                 
                                 cfg.Name,
                                 cfg.TimeoutInSeconds,
-                                rollingAverageWindow: 10,
-                                cfg.Labels
-                            )
-                            { MaxBatchSize = cfg.MaxBatchSize });
+                                cfg.MovingAverageAlpha,
+                                cfg.Labels,
+                                cfg.MaxBatchSize
+                            ));
                             break;
 
-                        // case "TensorServer": servers.Add(new TensorServer(...)); break;
-
                         default:
-                            throw new InvalidOperationException($"Unknown server type: {cfg.Type}");
+                            throw new ArgumentOutOfRangeException(
+                                nameof(cfg.Type),
+                                cfg.Type,
+                                $"Unknown server type for server '{cfg.Name}'.");
                     }
                 }
             }
