@@ -1,0 +1,6 @@
+@DynamicTileFlow_HostAddress = http://localhost:5283
+
+GET {{DynamicTileFlow_HostAddress}}/weatherforecast/
+Accept: application/json
+
+###

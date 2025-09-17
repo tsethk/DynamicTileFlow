@@ -1,0 +1,4 @@
+﻿Newtonsoft.Json
+Copyright (c) James Newton-King
+Licensed under the MIT License
+https://github.com/JamesNK/Newtonsoft.Json/blob/master/LICENSE.md

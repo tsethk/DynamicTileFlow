@@ -1,0 +1,49 @@
+﻿using DynamicTileFlow.Classes.JSON;
+using Microsoft.AspNetCore.Hosting.Server;
+using Newtonsoft.Json;
+using SixLabors.ImageSharp;
+using SixLabors.ImageSharp.PixelFormats;
+using System.ComponentModel;
+using System.Net.Http;
+using static System.Net.Mime.MediaTypeNames;
+
+namespace DynamicTileFlow.Classes.Servers
+{
+
+    public class YoloServer : AIServer
+    {
+        public YoloServer(string serverName, int port, string endpoint, bool isSSL, string name, int serverTimeout, int rollingAverageWindow)
+            : base(serverName, port, endpoint, isSSL, name, serverTimeout, rollingAverageWindow) // Pass required arguments to base constructor
+        {
+        }
+        public override Task<APIResponse?> CallAPI(List<ImageBatchItem> Images)
+        {
+            throw new NotImplementedException();
+        }
+        public override async Task<APIResponse?> CallAPI(Image<Rgba32> Image)
+        {
+            using (var client = new HttpClient())
+            {
+                using var imageStream = new MemoryStream();
+                await Image.SaveAsJpegAsync(imageStream);
+                imageStream.Seek(0, SeekOrigin.Begin);
+
+                var content = new MultipartFormDataContent();
+                content.Add(new StreamContent(imageStream), "image", "tile.jpg");
+
+                HttpResponseMessage? response;
+
+                var startCall = DateTime.Now;
+                response = await client.PostAsync(ServiceUrl, content);
+                AddRoundTripStat((int)(DateTime.Now - startCall).TotalMilliseconds);
+
+                if (response == null || !response.IsSuccessStatusCode) return null;
+
+                var json = await response.Content.ReadAsStringAsync();
+                var parsed = JsonConvert.DeserializeObject<CodeProjectAIResponse>(json);
+
+                return parsed;
+            }
+        }
+    }
+}

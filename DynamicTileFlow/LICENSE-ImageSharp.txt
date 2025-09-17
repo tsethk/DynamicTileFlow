@@ -1,0 +1,4 @@
+﻿SixLabors.ImageSharp
+Copyright 2016-2025 Six Labors
+Licensed under the Apache License, Version 2.0
+https://github.com/SixLabors/ImageSharp/blob/main/LICENSE
