@@ -11,6 +11,8 @@ namespace ImageTilerProcessor
     {
         public static void Main(string[] args)
         {
+            Console.WriteLine("Using Roboto-Regular.ttf (Apache 2.0 License)");
+            
             var builder = WebApplication.CreateBuilder(args);
 
             // Add services to the container.

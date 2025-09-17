@@ -296,7 +296,6 @@ namespace DynamicTileFlow.Controllers
 
                         if (Result != null)
                         {
-                            var StartOffsetScale = DateTime.Now;
                             var MappedDetections = new List<DetectionResult>();
                             if (Result != null)
                             {
@@ -353,15 +352,13 @@ namespace DynamicTileFlow.Controllers
         }
         public static void DrawTextOnImage(Image<Rgba32> image, string text, float x, float y, int FontSize)
         {
-            // Load a font (you can also load from a file using FontCollection)
+            // Load bundled font
+            var collection = new FontCollection();
+            FontFamily family = collection.Add("Resources/Roboto-Regular.ttf");
 
-            // Get system font collection
-            var systemFonts = SystemFonts.Collection;
+            // Create the font at your desired size
+            Font font = family.CreateFont(FontSize, FontStyle.Regular);
 
-            // Try to find Arial, otherwise fallback to first available font
-            FontFamily family = systemFonts.Families.FirstOrDefault(f => f.Name == "Arial");
-
-            var font = family.CreateFont(FontSize, FontStyle.Bold);
 
             var color = Color.White;
             var location = new PointF(x, y);

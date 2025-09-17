@@ -1,9 +1,21 @@
 ﻿# DynamicTileFlow
 
+
+##Third-Party Libraries
+
 This project uses third-party libraries:
 
 - Newtonsoft.Json (MIT License) – https://github.com/JamesNK/Newtonsoft.Json
 - SixLabors.ImageSharp (Apache 2.0 License) – https://github.com/SixLabors/ImageSharp
+
+
+## Fonts
+
+This project includes the **Roboto** font (Roboto-Regular.ttf) for cross-platform image annotation.  
+Roboto is licensed under the **Apache License 2.0**. Full license text is included in `Resources/Roboto-License.txt`.  
+
+Font source: [https://fonts.google.com/specimen/Roboto](https://fonts.google.com/specimen/Roboto)
+
 
 DynamicTileFlow is maintained by Seth (tsethk@hotmail.com). DynamicTileFlow is licensed under nothing. You are free to use, modify, and distribute it as you see fit.  Just let me know if you are using it and for what, it'll make me happy!
 
@@ -213,3 +225,5 @@ AI Servers:
             },
             ...
         ]
+
+        
