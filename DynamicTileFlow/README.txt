@@ -78,6 +78,10 @@ Simple Diagram of Flow:
 
 Endpoints:
 
+    /
+        This endpoing returns a list of available endpoints and their descriptions, requests, response times, etc.
+
+
     /dynamic-tiler-image
         This endpoint returns an annotated image optionally with bounding boxes and labels, tile boundaries, or both.
 
