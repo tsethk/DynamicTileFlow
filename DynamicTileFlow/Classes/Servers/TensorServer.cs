@@ -80,7 +80,8 @@ namespace DynamicTileFlow.Classes.Servers
                         Output.shape[1],
                         Output.shape[2],
                         0.5f,
-                        Labels);
+                        Labels,
+                        0);
 
 
                     foreach (var detection in detections)

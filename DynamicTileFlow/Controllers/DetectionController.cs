@@ -29,16 +29,19 @@ namespace DynamicTileFlow.Controllers
         private readonly List<DynamicTilePlan> DynamicTilePlans;
 
         private readonly float IouThreshold;
-        float ConfidenceThreshold;
+        float MinConfidence;
 
-        public DetectionController(IConfiguration Configuration, AIServerList ServerList, List<DynamicTilePlan> DynamicTilePlans)
+        public DetectionController(
+            IConfiguration Configuration, 
+            AIServerList ServerList, 
+            List<DynamicTilePlan> DynamicTilePlans)
         {
             this.Configuration = Configuration;
             this.ServerList = ServerList;
             this.DynamicTilePlans = DynamicTilePlans;
 
             IouThreshold = Configuration.GetValue<float>("IOUThreshold");
-            ConfidenceThreshold = Configuration.GetValue<float>("MinConfidence");
+            MinConfidence = Configuration.GetValue<float>("MinConfidence");
         }
         [HttpGet]
         public IActionResult GetServerStatus()
@@ -141,7 +144,7 @@ namespace DynamicTileFlow.Controllers
             if(IncludeDetections == true)
             {
 
-                var AllResults = await GetDetections(Tiles, ServerList, ConfidenceThreshold, OriginalWidth, OriginalHeight);
+                var AllResults = await GetDetections(Tiles, ServerList, MinConfidence, OriginalWidth, OriginalHeight);
                 var Detections = AllResults.Select(r => r.Predictions).SelectMany(r => r).ToList();
                 var Predictions = NMS.NonMaximumSuppressionByName(Detections, IouThreshold);
 
@@ -231,7 +234,7 @@ namespace DynamicTileFlow.Controllers
                 return BadRequest("Invalid tiling strategy");
             }
 
-            var AllResults = await GetDetections(Tiles, ServerList, ConfidenceThreshold, OriginalWidth, OriginalHeight);
+            var AllResults = await GetDetections(Tiles, ServerList, MinConfidence, OriginalWidth, OriginalHeight);
 
             var StartProcessing = DateTime.Now;
 

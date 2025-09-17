@@ -16,9 +16,7 @@ namespace DynamicTileFlow.Classes.Servers
         public bool IsSSL { get; set; }
         public string ServiceUrl => (IsSSL ? "https" : "http") + "://" + ServerName + ":" + Port.ToString() + Endpoint;
         public string WebTestURL => (IsSSL ? "https" : "http") + "://" + ServerName + ":" + Port.ToString();
-        public int AvgRoundTripTotalCalls { get; private set; }
         public int AvgRoundTrip { get; private set; }
-        public int RollingAverageWindow { get; set; }
         public int TotalCalls { get; private set; }
         public int ActiveCalls => _ActiveCalls;
         public bool IsActive { get; private set; } = true;
@@ -107,7 +105,6 @@ namespace DynamicTileFlow.Classes.Servers
         {
             IsActive = false;
             AvgRoundTrip = 0;
-            AvgRoundTripTotalCalls = 0;
         }
         public void AddRoundTripStat(int Milliseconds)
         {

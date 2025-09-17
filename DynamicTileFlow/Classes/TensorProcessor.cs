@@ -90,7 +90,14 @@ namespace DynamicTileFlow.Classes
                 return null;
             }
         }
-        public static List<DetectionResult> DecodeDetections(float[] data, int batchSize, int features, int numBoxes, float confThreshold, string[] Labels)
+        public static List<DetectionResult> DecodeDetections(
+            float[] data, 
+            int batchSize, 
+            int features, 
+            int numBoxes, 
+            float confThreshold, 
+            string[] Labels,
+            float MinConfidence = 0)
         {
             List<DetectionResult> detections = new List<DetectionResult>();
 
@@ -119,7 +126,7 @@ namespace DynamicTileFlow.Classes
                         }
                     }
 
-                    if (maxScore > 0.25)
+                    if (maxScore >= MinConfidence)
                     {
                         detections.Add(new DetectionResult
                         {
