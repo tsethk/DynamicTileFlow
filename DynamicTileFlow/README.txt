@@ -79,7 +79,7 @@ Simple Diagram of Flow:
 Endpoints:
 
     /
-        This endpoing returns a list of available endpoints and their descriptions, requests, response times, etc.
+        This endpoint returns a list of available endpoints and their descriptions, requests, response times, etc.
 
 
     /dynamic-tiler-image
