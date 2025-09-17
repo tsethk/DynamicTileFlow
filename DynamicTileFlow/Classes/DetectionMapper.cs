@@ -4,9 +4,9 @@ namespace DynamicTileFlow.Classes
 {
     public class DetectionMapper
     {
-        /// <summary>
-        /// Maps a detection from a scaled/cropped tile back into full coordinates.
-        /// </summary>
+        ///<summary>
+        ///Maps a detection from a scaled/cropped tile back into full coordinates.
+        ///</summary>
         public static DetectionResult MapToFullImage(
             DetectionResult det,
             TileInfo tile,
@@ -30,7 +30,7 @@ namespace DynamicTileFlow.Classes
             mapped.y_min = (int)(det.y_min * invScale) + tile.YStart;
             mapped.y_max = (int)(det.y_max * invScale) + tile.YStart;
 
-            //Put a 10 pixel buffer in there to see if it stops agent DVR from crashing
+            // Put a 10 pixel buffer in there to see if it stops agent DVR from crashing
             mapped.x_min = Math.Max(10, mapped.x_min);
             mapped.y_min = Math.Max(10, mapped.y_min);
             mapped.x_max = Math.Min(OriginalImageWidth - 10, mapped.x_max);
@@ -39,9 +39,9 @@ namespace DynamicTileFlow.Classes
             return mapped;
         }
 
-        /// <summary>
-        /// Convenience method for a whole list of detections.
-        /// </summary>
+        ///<summary>
+        ///Convenience method for a whole list of detections.
+        ///</summary>
         public static List<DetectionResult> MapAllToFullImage(
             IEnumerable<DetectionResult> Detections,
             TileInfo Tile,

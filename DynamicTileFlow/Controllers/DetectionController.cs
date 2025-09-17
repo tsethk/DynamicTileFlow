@@ -45,29 +45,31 @@ namespace DynamicTileFlow.Controllers
         [HttpGet]
         public IActionResult GetServerStatus()
         {
-            //Return the server state object
+            // Return the server state object
             return Ok(ServerList.Servers);
         }
         [HttpPost("simple")]
         public async Task<IActionResult> SimpleDetect(
             [FromForm] IFormFile Image)
         {
-            //Run the straight query against the server
+            // Run the straight query against the server
             var Server = ServerList.GetAIEndpoint();
-            CodeProjectAIResponse? result = null;
+            APIResponse? result = null;
 
             if (Server != null)
             {
-                //Get the image from the form 
+                // Get the image from the form 
                 using var imageActual = SixLabors.ImageSharp.Image.Load<Rgba32>(Image.OpenReadStream());
 
-                result = (CodeProjectAIResponse?)await Server.SendRequest(imageActual);
+                result = await Server.SendRequest(imageActual);
 
                 if (result != null)
                 {
-                    //Set the server that processed the request for each prediction
-                    result.Predictions.ForEach(p => p.ServerName = Server.Name);
-                    result.ProcessedBy = Server.Name;
+                    var Response = new CodeProjectAIResponse();
+                    Response.Predictions = result.Predictions.Where(p => p.Confidence >= MinConfidence).ToList();   
+                    // Set the server that processed the request for each prediction
+                    Response.Predictions.ForEach(p => p.ServerName = Server.Name);
+                    Response.ProcessedBy = Server.Name;
                     return Ok(result);
                 }
                 else
@@ -85,7 +87,7 @@ namespace DynamicTileFlow.Controllers
             [FromQuery] bool? IncludeTiles = null,
             [FromQuery] int TileStrategy = 1)
         {
-            //Colors to rotate through while drawing boxes
+            // Colors to rotate through while drawing boxes
             var Colors = new List<Color>() {
                 Color.Red,
                 Color.Lime,
@@ -99,22 +101,22 @@ namespace DynamicTileFlow.Controllers
 
             var ColorIdx = 0;
 
-            //Get the image from the form 
+            // Get the image from the form 
             using var ImageActual = SixLabors.ImageSharp.Image.Load<Rgba32>(Image.OpenReadStream());
 
-            //Get original width and height
+            // Get original width and height
             var OriginalHeight = ImageActual.Height;
             var OriginalWidth = ImageActual.Width;
 
 
-            //Get the plan referenced by the resize strategy    
+            // Get the plan referenced by the resize strategy    
             var Plan = DynamicTilePlans.Where(d => d.TilePlanId == TileStrategy).FirstOrDefault();
 
             var Tiles = new List<TileInfo>();
 
             if (Plan != null)
             {
-                //Get the list of tiles to be processed based on the plan
+                // Get the list of tiles to be processed based on the plan
                 Tiles = DynamicProcessor.SplitAdaptive(ImageActual, Plan);
             }
             else
@@ -167,7 +169,7 @@ namespace DynamicTileFlow.Controllers
 
                     if(ResizeRatio != null)
                     {
-                        //Bad dynamic font sizing, but it works okay for now 
+                        // Bad dynamic font sizing, but it works okay for now 
                         FontSize = (int)(FontSize * (0.5f / ResizeRatio));
                     }
 
@@ -205,27 +207,27 @@ namespace DynamicTileFlow.Controllers
             int TotalProcessingTime = 0;
             var start = DateTime.Now;
 
-            //List of times spent calling the detection servers 
+            // List of times spent calling the detection servers 
             var DetectionServerCalls = new ConcurrentBag<Tuple<DateTime, DateTime>>();
 
-            //List of tiles to be returned in the response  
+            // List of tiles to be returned in the response  
             var ActualTiles = new List<ResizedTileInfo>();
 
-            //Get the image from the form 
+            // Get the image from the form 
             using var ImageActual = SixLabors.ImageSharp.Image.Load<Rgba32>(Image.OpenReadStream());
 
-            //Get original width and height
+            // Get original width and height
             var OriginalHeight = ImageActual.Height;
             var OriginalWidth = ImageActual.Width;
 
-            //Get the plan referenced by the resize strategy    
+            // Get the plan referenced by the resize strategy    
             var Plan = DynamicTilePlans.Where(d => d.TilePlanId == TileStrategy).FirstOrDefault();
 
             var Tiles = new List<TileInfo>();
 
             if (Plan != null)
             {
-                //Get the list of tiles to be processed based on the plan
+                // Get the list of tiles to be processed based on the plan
                 Tiles = DynamicProcessor.SplitAdaptive(ImageActual, Plan);
             }
             else
@@ -247,14 +249,14 @@ namespace DynamicTileFlow.Controllers
                 ProcessedBy = string.Join(", ", Predictions.Select(p => p.ServerName).Distinct().ToList()),
                 Success = true,
                 Message = "Found " + string.Join(", ", Predictions.Select(d => d.Label).Distinct().ToList()),
-                TileSizes = "", //string.Join(", ", Tiles.Select(t => t.Width.ToString() + "x" + t.Height.ToString()).Distinct().ToList()),
+                TileSizes = "", // string.Join(", ", Tiles.Select(t => t.Width.ToString() + "x" + t.Height.ToString()).Distinct().ToList()),
                 RequestId = "request-id",
                 ResizeSmallestDimension = -1,
                 TileCount = Tiles.Count,
                 OriginalImageSize = OriginalWidth.ToString() + "x" + OriginalHeight.ToString(),
                 ResizedImageSize = ImageActual.Width.ToString() + "x" + ImageActual.Height.ToString(),
                 InferenceMs = (int)GetTotalNonOverlappingTime(DetectionServerCalls).TotalMilliseconds,
-                TileList = null //string.Join("; ", ActualTiles.Select(t => $"x:{t.Item1},y:{t.Item2},w:{t.Item3},h:{t.Item4}"))
+                TileList = null // string.Join("; ", ActualTiles.Select(t => $"x:{t.Item1},y:{t.Item2},w:{t.Item3},h:{t.Item4}"))
             };
 
             FinalResult.ModuleId = string.Join(", ", AllResults.OfType<CodeProjectAIResponse>().Select(a => a.ModuleId).Distinct());

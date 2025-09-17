@@ -10,7 +10,7 @@ namespace DynamicTileFlow.Classes.Servers
         public IEnumerable<AIServer> Servers { get; set; }
         public AIServer? GetAIEndpoint()
         {
-            //Check if inactive servers are not active in another thread
+            // Check if inactive servers are not active in another thread
             _ = Task.Run(() =>
             {
                 foreach (var server in Servers.Where(s => s.IsActive == false && (s.LastKnownActive == null || (DateTime.Now - s.LastKnownActive!).Value.TotalSeconds > 30)))

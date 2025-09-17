@@ -131,37 +131,37 @@ Dynamic Tiling Strategies:
                 "ImageHeightExpected": 2160,            // Expected height of input images in pixels (not used currently, but for future automatic tile plan selection) 
                 "TilePlans": [                          // List of tile plans to use to split a single image
                     {
-                        "Y": 0,                         //The Y coordinate of the image where this tiling will be applied to, tiles will be created in a row from left to right at this Y coordinate
-                        "Height": 2160,                 //The height of the tile that will be grabbed from the image
-                        "Width": 3840,                  //The width of the tile that will be grabbed from the image
-                        "OverlapFactor": 0.25,          //The overlap factor to use for this set of tiles (0.0 to < 0.5)
-                        "ScaleWidth": 640               //Scale the width of the tile before sending to AI server (maintains aspect ratio)  
+                        "Y": 0,                         // The Y coordinate of the image where this tiling will be applied to, tiles will be created in a row from left to right at this Y coordinate
+                        "Height": 2160,                 // The height of the tile that will be grabbed from the image
+                        "Width": 3840,                  // The width of the tile that will be grabbed from the image
+                        "OverlapFactor": 0.25,          // The overlap factor to use for this set of tiles (0.0 to < 0.5)
+                        "ScaleWidth": 640               // Scale the width of the tile before sending to AI server (maintains aspect ratio)  
                     },
-                    {                                   //Add as many tile plans as needed for different areas of the image, they will all be processed and aggregated for final results using the NMS routines
+                    {                                   // Add as many tile plans as needed for different areas of the image, they will all be processed and aggregated for final results using the NMS routines
                         "Y": 0,
                         "Height": 2160,
                         "Width": 1920,
                         "OverlapFactor": 0.25,
                         "ScaleWidth": 640
                     },
-                    {                                   //For this plan the very top of the image will be examined in 640x640 tiles with 20% overlap
+                    {                                   // For this plan the very top of the image will be examined in 640x640 tiles with 20% overlap
                       "Y": 0,
                       "Height": 640,
                       "Width": 640,
                       "OverlapFactor": 0.2,
                       "ScaleWidth": 640
                     },
-                    {                                   //Then the next 640 pixels down will be examined in 640x640 tiles with 20% overlap (hence the starting Y of 512 instead of 640)
+                    {                                   // Then the next 640 pixels down will be examined in 640x640 tiles with 20% overlap (hence the starting Y of 512 instead of 640)
                       "Y": 512,
                       "Height": 640,
                       "Width": 640,
                       "OverlapFactor": 0.2,
                       "ScaleWidth": 640
                     }
-                    ...                                 //Add more tile plans as needed
+                    ...                                 // Add more tile plans as needed
                 ]
             },
-            {                                           //Add multiple tile strategies and use the TileStrategy query parameter to select per camera in AgentDVR
+            {                                           // Add multiple tile strategies and use the TileStrategy query parameter to select per camera in AgentDVR
                 "TilePlanId": 2,
                 "TilePlanName": "Test",
                 "ImageWidthExpected": 640,
@@ -183,8 +183,8 @@ Dynamic Tiling Strategies:
 AI Servers:
     If you have multiple AI servers, you can define them in appsettings.json. DynamicTileFlow will send tiles to the server with the least load. 
     The load is determined by the number of active requests and the average response time of each server. If a server fails to return a response
-    within the timeout period, it is marked as inactive and will not receive new requests until a process checks the base URL for the server and
-    sees that it is active.  This check is done every 30 seconds as requests come in, so if no requests are received the server will stay inactive
+    within the timeout period it is marked as inactive and will not receive new requests until a process checks the base URL for the server and
+    sees that it is active.  This check is done every 30 seconds in a separate thread as requests come in, so if no requests are received the server will stay inactive
     indefinitely.   
     
     Example appsettings.json:

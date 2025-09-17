@@ -56,7 +56,7 @@ namespace DynamicTileFlow.Classes.Servers
 
                 var ActualImages = Images.Select(i => i.Image).ToList();    
 
-                //All tiles should be the same height and width coming in for tensor input
+                // All tiles should be the same height and width coming in for tensor input
                 var TensorInput = TensorProcessor.CreateTensorInput(ActualImages, 3, ActualImages[0].Height, ActualImages[0].Width);
 
                 var content = new StringContent(JsonConvert.SerializeObject(TensorInput), System.Text.Encoding.UTF8, "application/json");
@@ -89,7 +89,7 @@ namespace DynamicTileFlow.Classes.Servers
                         if (detection.BatchNumber != null)
                         {
                             int batch = detection.BatchNumber.Value;
-                            //Scale boxes back to original image size   
+                            // Scale boxes back to original image size   
                             detection.OffsetAndScale(
                                 Images[batch].OriginalX, 
                                 Images[batch].OriginalY,   
