@@ -19,7 +19,6 @@ namespace DynamicTileFlow.Controllers
 
     [ApiController]
     [Route("")]
-    [Route("image-tiler")]
     public class DetectionController : ControllerBase
     {
         private readonly AIServerList ServerList;
@@ -86,7 +85,7 @@ namespace DynamicTileFlow.Controllers
             [FromQuery] bool? IncludeTiles = null,
             [FromQuery] int TileStrategy = 1)
         {
-
+            //Colors to rotate through while drawing boxes
             var Colors = new List<Color>() {
                 Color.Red,
                 Color.Lime,
@@ -94,7 +93,8 @@ namespace DynamicTileFlow.Controllers
                 Color.Yellow,
                 Color.Pink,
                 Color.Violet,
-                Color.Turquoise
+                Color.Turquoise,
+                Color.Brown
             };
 
             var ColorIdx = 0;
@@ -167,6 +167,7 @@ namespace DynamicTileFlow.Controllers
 
                     if(ResizeRatio != null)
                     {
+                        //Bad dynamic font sizing, but it works okay for now 
                         FontSize = (int)(FontSize * (0.5f / ResizeRatio));
                     }
 
@@ -177,8 +178,6 @@ namespace DynamicTileFlow.Controllers
                         Prediction.y_min - 30,
                         FontSize);     
                 }
-
-
             }
 
             if (ResizeRatio != null)
