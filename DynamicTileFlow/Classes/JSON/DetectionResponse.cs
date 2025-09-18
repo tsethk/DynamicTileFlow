@@ -17,12 +17,8 @@
         public int AnalysisRoundTripMs { get; set; } = 300;
         public string ProcessedBy { get; set; } = "localhost";
         public string TimestampUTC => DateTime.Now.ToUniversalTime().ToString();
-        public string TileSizes { get; set; } = "";
         public int TileCount { get; set; } = 0; 
-        public int ResizeSmallestDimension { get; set; } = 640;
         public string OriginalImageSize { get; set; } = "";
-        public string ResizedImageSize { get; set; } = "";
-        public List<ResizedTileInfo>? TileList { get; set; } = null;
         public string ServerName { get; set; } = "";    
     }
 }

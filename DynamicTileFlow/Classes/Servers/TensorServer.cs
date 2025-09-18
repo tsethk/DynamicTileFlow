@@ -13,74 +13,49 @@ using static System.Net.Mime.MediaTypeNames;
 
 namespace DynamicTileFlow.Classes.Servers
 {
-    public class TensorAPIRequest
-    {
-        public List<TensorAPIInput>? inputs { get; set; } = new List<TensorAPIInput>();
-    }
-    public class TensorAPIInput
-    {
-        public string? name { get; set; }
-        public string? datatype { get; set; }
-        public int[]? shape { get; set; }
-        public float[]? data { get; set; }
-    }
-    public class TensorAPIResponse
-    {
-        public string? model_name { get; set; }
-        public string? model_version { get; set; }
-        public TensorAPIOutput[]? outputs { get; set; }
-    }
-    public class TensorAPIOutput
-    {
-        public string? name { get; set; }
-        public string? datatype { get; set; }
-        public int[]? shape { get; set; }
-        public float[]? data { get; set; }
-
-    }
     public class TensorServer : AIServer
     {
-        public string[] Labels { get; set; }
+        private string[] _labels { get; set; }
 
-        public TensorServer(string serverName, int port, string endpoint, bool isSSL, string name, int serverTimeout, float movingAverageAlpha, string[] Labels, int MaxBatchSize)
+        public TensorServer(string serverName, int port, string endpoint, bool isSSL, string name, int serverTimeout, float movingAverageAlpha, string[] labels, int maxBatchSize)
             : base(serverName, port, endpoint, isSSL, name, serverTimeout, movingAverageAlpha) // Pass required arguments to base constructor
         {
-            this.Labels = Labels;
-            this.MaxBatchSize = MaxBatchSize;
+            this._labels = labels;
+            this.MaxBatchSize = maxBatchSize;
         }
-        public override async Task<APIResponse?> CallAPI(List<ImageBatchItem> Images)
+        public override async Task<APIResponse?> CallAPI(List<ImageBatchItem> images)
         {
             using (var client = new HttpClient())
             {
-                var TensorDetections = new APIResponse();
+                var tensorDetections = new APIResponse();
 
-                var ActualImages = Images.Select(i => i.Image).ToList();    
+                var actualImages = images.Select(i => i.Image).ToList();    
 
                 // All tiles should be the same height and width coming in for tensor input
-                var TensorInput = TensorProcessor.CreateTensorInput(ActualImages, 3, ActualImages[0].Height, ActualImages[0].Width);
+                var tensorInput = TensorProcessor.CreateTensorInput(actualImages, 3, actualImages[0].Height, actualImages[0].Width);
 
-                var content = new StringContent(JsonConvert.SerializeObject(TensorInput), System.Text.Encoding.UTF8, "application/json");
+                var content = new StringContent(JsonConvert.SerializeObject(tensorInput), System.Text.Encoding.UTF8, "application/json");
 
                 // Replace with actual endpoint and adjust key names as needed
-                var Response = await client.PostAsync(ServiceUrl, content);
+                var response = await client.PostAsync(ServiceUrl, content);
 
-                if (!Response.IsSuccessStatusCode) return null;
+                if (!response.IsSuccessStatusCode) return null;
 
-                var TensorResponse = await TensorProcessor.DecodeTensorApiResponse(Response);
+                var tensorResponse = await TensorProcessor.DecodeTensorApiResponse(response);
 
                 List<DetectionResult>? detections = new List<DetectionResult>();
 
-                var Output = TensorResponse?.outputs?.FirstOrDefault();
+                var output = tensorResponse?.Outputs?.FirstOrDefault();
 
-                if (Output?.data != null && Output?.shape?.Length >= 3)
+                if (output?.Data != null && output?.Shape?.Length >= 3)
                 {
                     detections = TensorProcessor.DecodeDetections(
-                        Output.data,
-                        Output.shape[0],
-                        Output.shape[1],
-                        Output.shape[2],
+                        output.Data,
+                        output.Shape[0],
+                        output.Shape[1],
+                        output.Shape[2],
                         0.5f,
-                        Labels,
+                        _labels,
                         0);
 
 
@@ -91,24 +66,24 @@ namespace DynamicTileFlow.Classes.Servers
                             int batch = detection.BatchNumber.Value;
                             // Scale boxes back to original image size   
                             detection.OffsetAndScale(
-                                Images[batch].OriginalX, 
-                                Images[batch].OriginalY,   
-                                Images[batch].OriginalHeight / Images[batch].Image.Height);
+                                images[batch].OriginalX, 
+                                images[batch].OriginalY,   
+                                images[batch].OriginalHeight / images[batch].Image.Height);
                         }
                     }
-                    TensorDetections.Predictions = detections;
+                    tensorDetections.Predictions = detections;
                 }
                 else
                 {
                     throw new Exception("No valid output received from Tensor API.");
                 }
 
-                return TensorDetections;
+                return tensorDetections;
             }
         }
-        public override async Task<APIResponse?> CallAPI(Image<Rgba32> Image)
+        public override async Task<APIResponse?> CallAPI(Image<Rgba32> image)
         {
-            return await CallAPI(new List<ImageBatchItem> { new ImageBatchItem(Image) });   
+            return await CallAPI(new List<ImageBatchItem> { new ImageBatchItem(image) });   
         }
     }
 }

@@ -21,55 +21,52 @@ namespace DynamicTileFlow.Controllers
     [Route("")]
     public class DetectionController : ControllerBase
     {
-        private readonly AIServerList ServerList;
+        private readonly AIServerList _serverList;
 
-        private readonly IConfiguration Configuration;
+        private readonly List<DynamicTilePlan> _dynamicTilePlans;
 
-        private readonly List<DynamicTilePlan> DynamicTilePlans;
-
-        private readonly float IouThreshold;
-        float MinConfidence;
+        private readonly float iouThreshold;
+        private readonly float minConfidence;
 
         public DetectionController(
-            IConfiguration Configuration, 
-            AIServerList ServerList, 
-            List<DynamicTilePlan> DynamicTilePlans)
+            IConfiguration configuration,
+            AIServerList serverList,
+            List<DynamicTilePlan> dynamicTilePlans)
         {
-            this.Configuration = Configuration;
-            this.ServerList = ServerList;
-            this.DynamicTilePlans = DynamicTilePlans;
+            _serverList = serverList;
+            _dynamicTilePlans = dynamicTilePlans;
 
-            IouThreshold = Configuration.GetValue<float>("IOUThreshold");
-            MinConfidence = Configuration.GetValue<float>("MinConfidence");
+            iouThreshold = configuration.GetValue<float>("IOUThreshold");
+            minConfidence = configuration.GetValue<float>("MinConfidence");
         }
         [HttpGet]
         public IActionResult GetServerStatus()
         {
             // Return the server state object
-            return Ok(ServerList.Servers);
+            return Ok(_serverList.Servers);
         }
         [HttpPost("simple")]
         public async Task<IActionResult> SimpleDetect(
-            [FromForm] IFormFile Image)
+            [FromForm(Name = "Image")] IFormFile image)
         {
             // Run the straight query against the server
-            var Server = ServerList.GetAIEndpoint();
+            var Server = _serverList.GetAIEndpoint();
             APIResponse? result = null;
 
             if (Server != null)
             {
                 // Get the image from the form 
-                using var imageActual = SixLabors.ImageSharp.Image.Load<Rgba32>(Image.OpenReadStream());
+                using var imageActual = SixLabors.ImageSharp.Image.Load<Rgba32>(image.OpenReadStream());
 
                 result = await Server.SendRequest(imageActual);
 
                 if (result != null)
                 {
-                    var Response = new CodeProjectAIResponse();
-                    Response.Predictions = result.Predictions.Where(p => p.Confidence >= MinConfidence).ToList();   
+                    var response = new CodeProjectAIResponse();
+                    response.Predictions = result.Predictions.Where(p => p.Confidence >= minConfidence).ToList();
                     // Set the server that processed the request for each prediction
-                    Response.Predictions.ForEach(p => p.ServerName = Server.Name);
-                    Response.ProcessedBy = Server.Name;
+                    response.Predictions.ForEach(p => p.ServerName = Server.Name);
+                    response.ProcessedBy = Server.Name;
                     return Ok(result);
                 }
                 else
@@ -81,11 +78,11 @@ namespace DynamicTileFlow.Controllers
         }
         [HttpPost("dynamic-tiler-image")]
         public async Task<IActionResult> DynamicTilerImage(
-            [FromForm] IFormFile Image,
-            [FromQuery] float? ResizeRatio = null,
-            [FromQuery] bool? IncludeDetections = null,
-            [FromQuery] bool? IncludeTiles = null,
-            [FromQuery] int TileStrategy = 1)
+            [FromForm(Name ="Image")] IFormFile image,
+            [FromQuery] float? resizeRatio = null,
+            [FromQuery] bool? includeDetections = null,
+            [FromQuery] bool? includeTiles = null,
+            [FromQuery] int tileStrategy = 1)
         {
             // Colors to rotate through while drawing boxes
             var Colors = new List<Color>() {
@@ -102,7 +99,7 @@ namespace DynamicTileFlow.Controllers
             var ColorIdx = 0;
 
             // Get the image from the form 
-            using var ImageActual = SixLabors.ImageSharp.Image.Load<Rgba32>(Image.OpenReadStream());
+            using var ImageActual = SixLabors.ImageSharp.Image.Load<Rgba32>(image.OpenReadStream());
 
             // Get original width and height
             var OriginalHeight = ImageActual.Height;
@@ -110,7 +107,7 @@ namespace DynamicTileFlow.Controllers
 
 
             // Get the plan referenced by the resize strategy    
-            var Plan = DynamicTilePlans.Where(d => d.TilePlanId == TileStrategy).FirstOrDefault();
+            var Plan = _dynamicTilePlans.Where(d => d.TilePlanId == tileStrategy).FirstOrDefault();
 
             var Tiles = new List<TileInfo>();
 
@@ -124,7 +121,7 @@ namespace DynamicTileFlow.Controllers
                 return BadRequest("Invalid tiling strategy");
             }
 
-            if (IncludeTiles == true)
+            if (includeTiles == true)
             {
                 foreach (var Tile in Tiles)
                 {
@@ -143,20 +140,20 @@ namespace DynamicTileFlow.Controllers
                 }
             }
 
-            if(IncludeDetections == true)
+            if (includeDetections == true)
             {
 
-                var AllResults = await GetDetections(Tiles, ServerList, MinConfidence, OriginalWidth, OriginalHeight);
+                var AllResults = await GetDetections(Tiles, _serverList, minConfidence, OriginalWidth, OriginalHeight);
                 var Detections = AllResults.Select(r => r.Predictions).SelectMany(r => r).ToList();
-                var Predictions = NMS.NonMaximumSuppressionByName(Detections, IouThreshold);
+                var Predictions = NMS.NonMaximumSuppressionByName(Detections, iouThreshold);
 
-                foreach(var Prediction in Predictions)
+                foreach (var Prediction in Predictions)
                 {
                     var rect = new RectangleF(
-                        Prediction.x_min,
-                        Prediction.y_min,
-                        Prediction.x_max - Prediction.x_min,
-                        Prediction.y_max - Prediction.y_min);
+                        Prediction.X_min,
+                        Prediction.Y_min,
+                        Prediction.X_max - Prediction.X_min,
+                        Prediction.Y_max - Prediction.Y_min);
 
                     // Outline pen (red, 3px thick)
                     var pen = Pens.Solid(Colors[ColorIdx], 12);
@@ -167,25 +164,25 @@ namespace DynamicTileFlow.Controllers
 
                     var FontSize = 24;
 
-                    if(ResizeRatio != null)
+                    if (resizeRatio != null)
                     {
                         // Bad dynamic font sizing, but it works okay for now 
-                        FontSize = (int)(FontSize * (0.5f / ResizeRatio));
+                        FontSize = (int)(FontSize * (0.5f / resizeRatio));
                     }
 
                     DrawTextOnImage(
-                        ImageActual, 
-                        Prediction.Label + " " + Prediction.Confidence.ToString("0.00"), 
-                        Prediction.x_min, 
-                        Prediction.y_min - 30,
-                        FontSize);     
+                        ImageActual,
+                        Prediction.Label + " " + Prediction.Confidence.ToString("0.00"),
+                        Prediction.X_min,
+                        Prediction.Y_min - 30,
+                        FontSize);
                 }
             }
 
-            if (ResizeRatio != null)
+            if (resizeRatio != null)
             {
-                var NewWidth = (int)(ImageActual.Width * ResizeRatio);
-                var NewHeight = (int)(ImageActual.Height * ResizeRatio);
+                var NewWidth = (int)(ImageActual.Width * resizeRatio);
+                var NewHeight = (int)(ImageActual.Height * resizeRatio);
 
                 ImageActual.Mutate(ctx => ctx.Resize(NewWidth, NewHeight));
             }
@@ -199,13 +196,15 @@ namespace DynamicTileFlow.Controllers
         }
         [HttpPost("dynamic-tiler")]
         public async Task<IActionResult> DynamicTiler(
-            [FromForm] IFormFile Image,
-            [FromQuery] int TileStrategy = 1)
+            [FromForm(Name = "Image")] IFormFile image,
+            [FromQuery] int tileStrategy = 1)
         {
-            string guid = Guid.NewGuid().ToString().Substring(0, 5);
+            // Start the total time stopwatch   
+            var TotalTime = new Stopwatch();
+            TotalTime.Start();
 
-            int TotalProcessingTime = 0;
-            var start = DateTime.Now;
+            // Generate a short unique ID for the request   
+            string GUID = Guid.NewGuid().ToString().Substring(0, 5);
 
             // List of times spent calling the detection servers 
             var DetectionServerCalls = new ConcurrentBag<Tuple<DateTime, DateTime>>();
@@ -214,17 +213,18 @@ namespace DynamicTileFlow.Controllers
             var ActualTiles = new List<ResizedTileInfo>();
 
             // Get the image from the form 
-            using var ImageActual = SixLabors.ImageSharp.Image.Load<Rgba32>(Image.OpenReadStream());
+            using var ImageActual = SixLabors.ImageSharp.Image.Load<Rgba32>(image.OpenReadStream());
 
             // Get original width and height
             var OriginalHeight = ImageActual.Height;
             var OriginalWidth = ImageActual.Width;
 
             // Get the plan referenced by the resize strategy    
-            var Plan = DynamicTilePlans.Where(d => d.TilePlanId == TileStrategy).FirstOrDefault();
+            var Plan = _dynamicTilePlans.Where(d => d.TilePlanId == tileStrategy).FirstOrDefault();
 
             var Tiles = new List<TileInfo>();
 
+            // Make sure we have a valid plan   
             if (Plan != null)
             {
                 // Get the list of tiles to be processed based on the plan
@@ -234,13 +234,16 @@ namespace DynamicTileFlow.Controllers
             {
                 return BadRequest("Invalid tiling strategy");
             }
+            var InferenceTime = new Stopwatch();
+            InferenceTime.Start();
+            var AllResults = await GetDetections(Tiles, _serverList, minConfidence, OriginalWidth, OriginalHeight);
+            InferenceTime.Stop();
 
-            var AllResults = await GetDetections(Tiles, ServerList, MinConfidence, OriginalWidth, OriginalHeight);
-
-            var StartProcessing = DateTime.Now;
+            var ProcessingTime = new Stopwatch();
+            ProcessingTime.Start();
 
             var Detections = AllResults.Select(r => r.Predictions).SelectMany(r => r).ToList();
-            var Predictions = NMS.NonMaximumSuppressionByName(Detections, IouThreshold);
+            var Predictions = NMS.NonMaximumSuppressionByName(Detections, iouThreshold);
             var FinalResult = new DetectionResponse()
             {
                 Predictions = Predictions,
@@ -248,45 +251,39 @@ namespace DynamicTileFlow.Controllers
                 Command = "detect",
                 ProcessedBy = string.Join(", ", Predictions.Select(p => p.ServerName).Distinct().ToList()),
                 Success = true,
-                Message = "Found " + string.Join(", ", Predictions.Select(d => d.Label).Distinct().ToList()),
-                TileSizes = "", // string.Join(", ", Tiles.Select(t => t.Width.ToString() + "x" + t.Height.ToString()).Distinct().ToList()),
-                RequestId = "request-id",
-                ResizeSmallestDimension = -1,
+                Message = "Found " + string.Join(", ", Predictions.Select(d => d.Label.Trim()).Distinct().ToList()),
+                RequestId = GUID,
                 TileCount = Tiles.Count,
                 OriginalImageSize = OriginalWidth.ToString() + "x" + OriginalHeight.ToString(),
-                ResizedImageSize = ImageActual.Width.ToString() + "x" + ImageActual.Height.ToString(),
-                InferenceMs = (int)GetTotalNonOverlappingTime(DetectionServerCalls).TotalMilliseconds,
-                TileList = null // string.Join("; ", ActualTiles.Select(t => $"x:{t.Item1},y:{t.Item2},w:{t.Item3},h:{t.Item4}"))
+                InferenceMs = (int)InferenceTime.Elapsed.TotalMilliseconds,
+                ModuleId = string.Join(", ", AllResults.OfType<CodeProjectAIResponse>().Select(a => a.ModuleId).Distinct()),
+                ModuleName = string.Join(", ", AllResults.OfType<CodeProjectAIResponse>().Select(a => a.ModuleName).Distinct()),
+                InferenceDevice = string.Join(", ", AllResults.OfType<CodeProjectAIResponse>().Select(a => a.InferenceDevice).Distinct()),
+
             };
 
-            FinalResult.ModuleId = string.Join(", ", AllResults.OfType<CodeProjectAIResponse>().Select(a => a.ModuleId).Distinct());
-            FinalResult.ModuleName = string.Join(", ", AllResults.OfType<CodeProjectAIResponse>().Select(a => a.ModuleName).Distinct());
-            FinalResult.InferenceDevice = string.Join(", ", AllResults.OfType<CodeProjectAIResponse>().Select(a => a.InferenceDevice).Distinct());
-
-            TotalProcessingTime += (int)(DateTime.Now - StartProcessing).TotalMilliseconds;
-            var msProcess = (DateTime.Now - start).TotalMilliseconds;
-            FinalResult.ProcessMs = TotalProcessingTime;
-            FinalResult.AnalysisRoundTripMs = (int)msProcess;
+            FinalResult.ProcessMs = (int)ProcessingTime.Elapsed.TotalMilliseconds;
+            FinalResult.AnalysisRoundTripMs = (int)TotalTime.Elapsed.TotalMilliseconds;
 
             return Ok(FinalResult);
         }
         static public async Task<IEnumerable<APIResponse>> GetDetections(
-            List<TileInfo> Tiles, 
-            AIServerList ServerList,
-            float ConfidenceThreshold,
-            int OriginalWidth, 
-            int OriginalHeight)
+            List<TileInfo> tiles,
+            AIServerList serverList,
+            float confidenceThreshold,
+            int originalWidth,
+            int originalHeight)
         {
             var tasks = new List<Task<APIResponse>>();
 
-            for (int i = 0; i < Tiles.Count; i++)
+            for (int i = 0; i < tiles.Count; i++)
             {
-                var Tile = Tiles[i];
+                var Tile = tiles[i];
 
                 var task = Task.Run(async () =>
                 {
                     APIResponse? Result = null;
-                    AIServer? Server = ServerList.GetAIEndpoint();
+                    AIServer? Server = serverList.GetAIEndpoint();
 
                     if (Server != null)
                     {
@@ -299,11 +296,11 @@ namespace DynamicTileFlow.Controllers
                             var MappedDetections = new List<DetectionResult>();
                             if (Result != null)
                             {
-                                foreach (var Detection in Result.Predictions.Where(p => p.Confidence >= ConfidenceThreshold))
+                                foreach (var Detection in Result.Predictions.Where(p => p.Confidence >= confidenceThreshold))
                                 {
                                     Detection.ServerName = Server.Name;
                                     MappedDetections.Add(
-                                        DetectionMapper.MapToFullImage(Detection, Tile, OriginalWidth, OriginalHeight));
+                                        DetectionMapper.MapToFullImage(Detection, Tile, originalWidth, originalHeight));
                                 }
                                 Result.Predictions = MappedDetections;
                             }
@@ -318,37 +315,6 @@ namespace DynamicTileFlow.Controllers
             var AllResults = await Task.WhenAll(tasks);
 
             return [.. AllResults];
-        }
-        static TimeSpan GetTotalNonOverlappingTime(ConcurrentBag<Tuple<DateTime, DateTime>> Times)
-        {
-            var Intervals = Times
-                .Select(t => (Start: t.Item1, End: t.Item2))
-                .OrderBy(t => t.Start)
-                .ToList();
-
-            if (Intervals.Count == 0)
-                return TimeSpan.Zero;
-
-            var Merged = new List<(DateTime Start, DateTime End)>();
-            var currentStart = Intervals[0].Start;
-            var CurrentEnd = Intervals[0].End;
-
-            foreach (var Interval in Intervals.Skip(1))
-            {
-                if (Interval.Start <= CurrentEnd) // overlap
-                {
-                    CurrentEnd = (Interval.End > CurrentEnd) ? Interval.End : CurrentEnd;
-                }
-                else
-                {
-                    Merged.Add((currentStart, CurrentEnd));
-                    currentStart = Interval.Start;
-                    CurrentEnd = Interval.End;
-                }
-            }
-            Merged.Add((currentStart, CurrentEnd));
-
-            return TimeSpan.FromTicks(Merged.Sum(i => (i.End - i.Start).Ticks));
         }
         public static void DrawTextOnImage(Image<Rgba32> image, string text, float x, float y, int FontSize)
         {

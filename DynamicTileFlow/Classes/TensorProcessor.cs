@@ -1,4 +1,5 @@
-﻿using DynamicTileFlow.Classes.Servers;
+﻿using DynamicTileFlow.Classes.JSON;
+using DynamicTileFlow.Classes.Servers;
 using Newtonsoft.Json;
 using SixLabors.ImageSharp;
 using SixLabors.ImageSharp.Advanced;
@@ -8,29 +9,33 @@ namespace DynamicTileFlow.Classes
 {
     public class TensorProcessor
     {
-        public static TensorAPIRequest CreateTensorInput(List<Image<Rgba32>> Images, int Channels, int Height, int Width)
+        public static TensorAPIRequest CreateTensorInput(
+            List<Image<Rgba32>> images, 
+            int channels, 
+            int height, 
+            int width)
         {
-            int BatchSize = Images.Count;
+            int batchSize = images.Count;
 
-            float[,,,] batchInput = new float[BatchSize, Channels, Height, Width];
+            float[,,,] batchInput = new float[batchSize, channels, height, width];
 
-            Parallel.For(0, BatchSize, i =>
+            Parallel.For(0, batchSize, i =>
             {
-                PrepareImageDirect(Images[i], batchInput, i, Height, Width);
+                PrepareImageDirect(images[i], batchInput, i, height, width);
             });
 
             float[] flattened = FlattenTensor(batchInput);
 
             var requestPayload = new TensorAPIRequest
             {
-                inputs = new List<TensorAPIInput>
+                Inputs = new List<TensorAPIInput>
             {
                 new TensorAPIInput
                 {
-                    name = "images",
-                    shape = [BatchSize, Channels, Height, Width],
-                    datatype = "FP32",
-                    data = flattened
+                    Name = "images",
+                    Shape = [batchSize, channels, height, width],
+                    Datatype = "FP32",
+                    Data = flattened
                 }
             }
             };
@@ -61,18 +66,18 @@ namespace DynamicTileFlow.Classes
 
             return flat;
         }
-        public static void PrepareImageDirect(Image<Rgba32> Image, float[,,,] BatchInput, int BatchIndex, int TargetHeight, int TargetWidth)
+        public static void PrepareImageDirect(Image<Rgba32> image, float[,,,] batchInput, int batchIndex, int targetHeight, int targetWidth)
         {
-            Parallel.For(0, TargetHeight, y =>
+            Parallel.For(0, targetHeight, y =>
             {
-                Memory<Rgba32> pixelMemory = Image.DangerousGetPixelRowMemory(y);
+                Memory<Rgba32> pixelMemory = image.DangerousGetPixelRowMemory(y);
                 Span<Rgba32> pixels = pixelMemory.Span;
-                for (int x = 0; x < TargetWidth; x++)
+                for (int x = 0; x < targetWidth; x++)
                 {
                     ref Rgba32 pixel = ref pixels[x];
-                    BatchInput[BatchIndex, 0, y, x] = pixel.R * (1f / 255f);
-                    BatchInput[BatchIndex, 1, y, x] = pixel.G * (1f / 255f);
-                    BatchInput[BatchIndex, 2, y, x] = pixel.B * (1f / 255f);
+                    batchInput[batchIndex, 0, y, x] = pixel.R * (1f / 255f);
+                    batchInput[batchIndex, 1, y, x] = pixel.G * (1f / 255f);
+                    batchInput[batchIndex, 2, y, x] = pixel.B * (1f / 255f);
                 }
             });
         }
@@ -96,8 +101,8 @@ namespace DynamicTileFlow.Classes
             int features, 
             int numBoxes, 
             float confThreshold, 
-            string[] Labels,
-            float MinConfidence = 0)
+            string[] labels,
+            float minConfidence = 0)
         {
             List<DetectionResult> detections = new List<DetectionResult>();
 
@@ -126,15 +131,15 @@ namespace DynamicTileFlow.Classes
                         }
                     }
 
-                    if (maxScore >= MinConfidence)
+                    if (maxScore >= minConfidence)
                     {
                         detections.Add(new DetectionResult
                         {
-                            x_min = (int)(xCenter - width / 2),
-                            y_min = (int)(yCenter - height / 2),
-                            x_max = (int)(xCenter + width / 2),
-                            y_max = (int)(yCenter + height / 2),
-                            Label = Labels[classId],
+                            X_min = (int)(xCenter - width / 2),
+                            Y_min = (int)(yCenter - height / 2),
+                            X_max = (int)(xCenter + width / 2),
+                            Y_max = (int)(yCenter + height / 2),
+                            Label = labels[classId],
                             Confidence = maxScore,
                             BatchNumber = batch,
                         });

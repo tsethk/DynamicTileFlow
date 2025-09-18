@@ -1,4 +1,5 @@
 ﻿using DynamicTileFlow.Classes.DynamicTiler;
+using DynamicTileFlow.Classes.JSON;
 
 namespace DynamicTileFlow.Classes
 {
@@ -10,8 +11,8 @@ namespace DynamicTileFlow.Classes
         public static DetectionResult MapToFullImage(
             DetectionResult det,
             TileInfo tile,
-            int OriginalImageWidth,
-            int OriginalImageHeight)
+            int originalImageWidth,
+            int originalImageHeight)
         {
             // Copy to avoid mutating the original detection
             var mapped = new DetectionResult
@@ -24,17 +25,17 @@ namespace DynamicTileFlow.Classes
 
             float invScale = 1.0f / tile.Scale;
 
-            mapped.x_min = (int)(det.x_min * invScale) + tile.XStart;
-            mapped.x_max = (int)(det.x_max * invScale) + tile.XStart;
+            mapped.X_min = (int)(det.X_min * invScale) + tile.XStart;
+            mapped.X_max = (int)(det.X_max * invScale) + tile.XStart;
 
-            mapped.y_min = (int)(det.y_min * invScale) + tile.YStart;
-            mapped.y_max = (int)(det.y_max * invScale) + tile.YStart;
+            mapped.Y_min = (int)(det.Y_min * invScale) + tile.YStart;
+            mapped.Y_max = (int)(det.Y_max * invScale) + tile.YStart;
 
             // Put a 10 pixel buffer in there to see if it stops agent DVR from crashing
-            mapped.x_min = Math.Max(10, mapped.x_min);
-            mapped.y_min = Math.Max(10, mapped.y_min);
-            mapped.x_max = Math.Min(OriginalImageWidth - 10, mapped.x_max);
-            mapped.y_max = Math.Min(OriginalImageHeight - 10, mapped.y_max);
+            mapped.X_min = Math.Max(10, mapped.X_min);
+            mapped.Y_min = Math.Max(10, mapped.Y_min);
+            mapped.X_max = Math.Min(originalImageWidth - 10, mapped.X_max);
+            mapped.Y_max = Math.Min(originalImageHeight - 10, mapped.Y_max);
 
             return mapped;
         }
@@ -43,15 +44,15 @@ namespace DynamicTileFlow.Classes
         ///Convenience method for a whole list of detections.
         ///</summary>
         public static List<DetectionResult> MapAllToFullImage(
-            IEnumerable<DetectionResult> Detections,
-            TileInfo Tile,
-            int OriginalImageWidth,
-            int OriginalImageHeight)
+            IEnumerable<DetectionResult> detections,
+            TileInfo tile,
+            int originalImageWidth,
+            int originalImageHeight)
         {
             var results = new List<DetectionResult>();
-            foreach (var det in Detections)
+            foreach (var detection in detections)
             {
-                results.Add(MapToFullImage(det, Tile, OriginalImageWidth, OriginalImageHeight));
+                results.Add(MapToFullImage(detection, tile, originalImageWidth, originalImageHeight));
             }
             return results;
         }

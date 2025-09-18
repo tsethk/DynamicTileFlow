@@ -1,12 +1,13 @@
 ﻿using DynamicTileFlow.Classes.JSON;
 using SixLabors.ImageSharp;
 using SixLabors.ImageSharp.PixelFormats;
+using System.Diagnostics;
 
 namespace DynamicTileFlow.Classes.Servers
 {
     public abstract class AIServer : IAIServer
     {
-        private int _ActiveCalls = 0;
+        private int _activeCalls = 0;
         public int ServerTimeout { get; private set; } = 10;
         public string Endpoint { get; set; }
         public string ServerName { get; set; }
@@ -18,23 +19,30 @@ namespace DynamicTileFlow.Classes.Servers
         public string WebTestURL => (IsSSL ? "https" : "http") + "://" + ServerName + ":" + Port.ToString();
         public int AvgRoundTrip { get; private set; }
         public int TotalCalls { get; private set; }
-        public int ActiveCalls => _ActiveCalls;
+        public int ActiveCalls => _activeCalls;
         public bool IsActive { get; private set; } = true;
         public int? MaxBatchSize { get; set; } = null;
         public float MovingAverageAlpha { get; set; }
-        public AIServer(string ServerName, int Port, string Endpoint, bool IsSSL, string Name, int ServerTimeout, float MovingAverageAlpha)
+        public AIServer(
+            string serverName, 
+            int port, 
+            string endpoint, 
+            bool isSSL, 
+            string name, 
+            int serverTimeout, 
+            float movingAverageAlpha)
         {
-            this.ServerName = ServerName;
-            this.Port = Port;
-            this.Endpoint = Endpoint;
-            this.IsSSL = IsSSL;
-            this.Name = Name;
-            this.ServerTimeout = ServerTimeout;
-            this.MovingAverageAlpha = MovingAverageAlpha;
-            _ActiveCalls = 0;
+            _activeCalls = 0;
+            ServerName = serverName;
+            Port = port;
+            Endpoint = endpoint;
+            IsSSL = isSSL;
+            Name = name;
+            ServerTimeout = serverTimeout;
+            MovingAverageAlpha = movingAverageAlpha;
             IsActive = true;
         }
-        public async Task<APIResponse?> SendRequest(Image<Rgba32> Image)
+        public async Task<APIResponse?> SendRequest(Image<Rgba32> image)
         {
             IncrementActiveCalls();
 
@@ -42,10 +50,10 @@ namespace DynamicTileFlow.Classes.Servers
 
             try
             {
-                // Await ensures exceptions bubble into the catch block
-                var startCall = DateTime.Now;
-                response = await CallAPI(Image);
-                AddRoundTripStat((int)(DateTime.Now - startCall).TotalMilliseconds);
+                var startCall = new Stopwatch();
+                startCall.Start();
+                response = await CallAPI(image);
+                AddRoundTripStat((int)startCall.Elapsed.TotalMilliseconds);
             }
             catch (Exception)
             {
@@ -63,7 +71,7 @@ namespace DynamicTileFlow.Classes.Servers
 
             return response;
         }
-        public async Task<APIResponse?> SendRequest(List<ImageBatchItem> Images)
+        public async Task<APIResponse?> SendRequest(List<ImageBatchItem> images)
         {
             IncrementActiveCalls();
 
@@ -71,10 +79,10 @@ namespace DynamicTileFlow.Classes.Servers
 
             try
             {
-                // Await ensures exceptions bubble into the catch block
-                var startCall = DateTime.Now;
-                response = await CallAPI(Images);
-                AddRoundTripStat((int)((DateTime.Now - startCall).TotalMilliseconds / Images.Count));
+                var startCall = new Stopwatch();
+                startCall.Start();
+                response = await CallAPI(images);
+                AddRoundTripStat((int)(startCall.Elapsed.TotalMilliseconds / images.Count));
             }
             catch (Exception)
             {
@@ -94,8 +102,8 @@ namespace DynamicTileFlow.Classes.Servers
         }
         public abstract Task<APIResponse?> CallAPI(Image<Rgba32> Image);
         public abstract Task<APIResponse?> CallAPI(List<ImageBatchItem> Images);
-        public void IncrementActiveCalls() => Interlocked.Increment(ref _ActiveCalls);
-        public void DecrementActiveCalls() => Interlocked.Decrement(ref _ActiveCalls);
+        public void IncrementActiveCalls() => Interlocked.Increment(ref _activeCalls);
+        public void DecrementActiveCalls() => Interlocked.Decrement(ref _activeCalls);
         public void Activate()
         {
             IsActive = true;
@@ -106,15 +114,15 @@ namespace DynamicTileFlow.Classes.Servers
             IsActive = false;
             AvgRoundTrip = 0;
         }
-        public void AddRoundTripStat(int Milliseconds)
+        public void AddRoundTripStat(int milliseconds)
         {
             if (AvgRoundTrip == 0)
             {
-                AvgRoundTrip = Milliseconds;
+                AvgRoundTrip = milliseconds;
             }
             else
             {
-                AvgRoundTrip = (int)(((1 - MovingAverageAlpha) * AvgRoundTrip) + (MovingAverageAlpha * Milliseconds));
+                AvgRoundTrip = (int)(((1 - MovingAverageAlpha) * AvgRoundTrip) + (MovingAverageAlpha * milliseconds));
             }
             TotalCalls++;
         }

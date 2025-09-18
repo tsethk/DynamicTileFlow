@@ -36,43 +36,43 @@ namespace DynamicTileFlow.Classes.DynamicTiler
             double overlapFactor)
         {
             // Get a list of tiles that will be added to the concurrent bag  
-            var NewTiles = new List<TileInfo>();
+            var newTiles = new List<TileInfo>();
 
-            int ActualWidthPerTile = (int)(widthPerTile * (1.0d - (2 * overlapFactor)));
-            int ActualOverlapPixels = (int)(widthPerTile * overlapFactor);
+            int actualWidthPerTile = (int)(widthPerTile * (1.0d - (2 * overlapFactor)));
+            int actualOverlapPixels = (int)(widthPerTile * overlapFactor);
 
             // Crop and resize each tile, run until the x of the tile is beyond the width of the image   
-            for (int x = 0; x < source.Width; x += ActualWidthPerTile + ActualOverlapPixels)
+            for (int x = 0; x < source.Width; x += actualWidthPerTile + actualOverlapPixels)
             {
                 // Set the width to be the remaining width if we are at the end of the image 
-                var ActualWidth = Math.Min(widthPerTile, source.Width - x);
-                var ActualHeight = Math.Min(height, source.Height - yStart);  
+                var actualWidth = Math.Min(widthPerTile, source.Width - x);
+                var actualHeight = Math.Min(height, source.Height - yStart);  
                 // Get the cropped image 
-                var Cropped = source.Clone(ctx =>
+                var cropped = source.Clone(ctx =>
                     ctx.Crop(new Rectangle(
                         x,
                         yStart,
-                        ActualWidth,
-                        ActualHeight)));
+                        actualWidth,
+                        actualHeight)));
 
                 // Scale if needed
                 if (Math.Abs(scale - 1.0f) > 0.001f)
                 {
-                    Cropped.Mutate(ctx => ctx.Resize((int)(widthPerTile * scale), (int)(height * scale)));
+                    cropped.Mutate(ctx => ctx.Resize((int)(widthPerTile * scale), (int)(height * scale)));
                 }
 
                 // Add to the list of tiles  
-                NewTiles.Add(new TileInfo
+                newTiles.Add(new TileInfo
                 {
-                    Image = Cropped,
+                    Image = cropped,
                     YStart = yStart,
                     Scale = scale,
                     XStart = x,
-                    Width = ActualWidth,
-                    Height = ActualHeight
+                    Width = actualWidth,
+                    Height = actualHeight
                 });
             }
-            return NewTiles;
+            return newTiles;
         }
     }
     public class TileInfo

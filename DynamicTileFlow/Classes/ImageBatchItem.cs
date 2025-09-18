@@ -10,21 +10,21 @@ namespace DynamicTileFlow.Classes
         public int OriginalY { get; set; }
         public int OriginalWidth { get; set; }
         public int OriginalHeight { get; set; }        
-        public ImageBatchItem(Image<Rgba32> Image)
+        public ImageBatchItem(Image<Rgba32> image)
         {
-            this.Image = Image;
+            Image = image;
             OriginalX = 0;
             OriginalY = 0;
             OriginalWidth = Image.Width;
             OriginalHeight = Image.Height;
         }
-        public ImageBatchItem(Image<Rgba32> Image, int OriginalX, int OriginalY, int OriginalWidth, int OriginalHeight)
+        public ImageBatchItem(Image<Rgba32> image, int originalX, int originalY, int originalWidth, int originalHeight)
         {
-            this.Image = Image;
-            this.OriginalX = OriginalX;
-            this.OriginalY = OriginalY;
-            this.OriginalWidth = OriginalWidth;
-            this.OriginalHeight = OriginalHeight;
+            Image = image;
+            OriginalX = originalX;
+            OriginalY = originalY;
+            OriginalWidth = originalWidth;
+            OriginalHeight = originalHeight;
         }
     }
 }
