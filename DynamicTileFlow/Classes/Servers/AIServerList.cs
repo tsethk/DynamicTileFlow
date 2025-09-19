@@ -3,10 +3,13 @@ namespace DynamicTileFlow.Classes.Servers
 {
     public class AIServerList
     {
-        public AIServerList(IEnumerable<AIServer> servers)
+
+        private int _inactiveServerCheckInterval { get; }
+        public AIServerList(IEnumerable<AIServer> servers, int inactiveServerCheckInterval)
         {
             Servers = servers;
-        }       
+            _inactiveServerCheckInterval = inactiveServerCheckInterval;
+        }
         public IEnumerable<AIServer> Servers { get; set; }
         public AIServer? GetAIEndpoint()
         {

@@ -2,6 +2,7 @@
 using DynamicTileFlow.Classes.DynamicTiler;
 using DynamicTileFlow.Classes.Servers;
 using Microsoft.AspNetCore.Hosting.Server;
+using Microsoft.Extensions.Configuration;
 using SixLabors.ImageSharp;
 
 
@@ -123,8 +124,8 @@ namespace ImageTilerProcessor
                     }
                 }
             }
-
-            builder.Services.AddSingleton<AIServerList>(new AIServerList(Servers));
+            int TimeoutCheck = builder.Configuration.GetValue<int>("InactiveServerCheckTimeoutSeconds");
+            builder.Services.AddSingleton<AIServerList>(new AIServerList(Servers, TimeoutCheck));
 
             var app = builder.Build();
 

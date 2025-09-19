@@ -22,11 +22,9 @@ namespace DynamicTileFlow.Controllers
     public class DetectionController : ControllerBase
     {
         private readonly AIServerList _serverList;
-
         private readonly List<DynamicTilePlan> _dynamicTilePlans;
-
-        private readonly float iouThreshold;
-        private readonly float minConfidence;
+        private readonly float _iouThreshold;
+        private readonly float _minConfidence;
 
         public DetectionController(
             IConfiguration configuration,
@@ -35,9 +33,8 @@ namespace DynamicTileFlow.Controllers
         {
             _serverList = serverList;
             _dynamicTilePlans = dynamicTilePlans;
-
-            iouThreshold = configuration.GetValue<float>("IOUThreshold");
-            minConfidence = configuration.GetValue<float>("MinConfidence");
+            _iouThreshold = configuration.GetValue<float>("IOUThreshold");
+            _minConfidence = configuration.GetValue<float>("MinConfidence");
         }
         [HttpGet]
         public IActionResult GetServerStatus()
@@ -56,14 +53,14 @@ namespace DynamicTileFlow.Controllers
             if (Server != null)
             {
                 // Get the image from the form 
-                using var imageActual = SixLabors.ImageSharp.Image.Load<Rgba32>(image.OpenReadStream());
+                using var imageActual = Image.Load<Rgba32>(image.OpenReadStream());
 
                 result = await Server.SendRequest(imageActual);
 
                 if (result != null)
                 {
                     var response = new CodeProjectAIResponse();
-                    response.Predictions = result.Predictions.Where(p => p.Confidence >= minConfidence).ToList();
+                    response.Predictions = result.Predictions.Where(p => p.Confidence >= _minConfidence).ToList();
                     // Set the server that processed the request for each prediction
                     response.Predictions.ForEach(p => p.ServerName = Server.Name);
                     response.ProcessedBy = Server.Name;
@@ -143,9 +140,9 @@ namespace DynamicTileFlow.Controllers
             if (includeDetections == true)
             {
 
-                var AllResults = await GetDetections(Tiles, _serverList, minConfidence, OriginalWidth, OriginalHeight);
+                var AllResults = await GetDetections(Tiles, _serverList, _minConfidence, OriginalWidth, OriginalHeight);
                 var Detections = AllResults.Select(r => r.Predictions).SelectMany(r => r).ToList();
-                var Predictions = NMS.NonMaximumSuppressionByName(Detections, iouThreshold);
+                var Predictions = NMS.NonMaximumSuppressionByName(Detections, _iouThreshold);
 
                 foreach (var Prediction in Predictions)
                 {
@@ -199,6 +196,8 @@ namespace DynamicTileFlow.Controllers
             [FromForm(Name = "Image")] IFormFile image,
             [FromQuery] int tileStrategy = 1)
         {
+            var ProcessingTime = new Stopwatch();
+            ProcessingTime.Start();
             // Start the total time stopwatch   
             var TotalTime = new Stopwatch();
             TotalTime.Start();
@@ -234,16 +233,19 @@ namespace DynamicTileFlow.Controllers
             {
                 return BadRequest("Invalid tiling strategy");
             }
+
             var InferenceTime = new Stopwatch();
+
+            ProcessingTime.Stop();
             InferenceTime.Start();
-            var AllResults = await GetDetections(Tiles, _serverList, minConfidence, OriginalWidth, OriginalHeight);
+
+            var AllResults = await GetDetections(Tiles, _serverList, _minConfidence, OriginalWidth, OriginalHeight);
+
+            ProcessingTime.Start();
             InferenceTime.Stop();
 
-            var ProcessingTime = new Stopwatch();
-            ProcessingTime.Start();
-
             var Detections = AllResults.Select(r => r.Predictions).SelectMany(r => r).ToList();
-            var Predictions = NMS.NonMaximumSuppressionByName(Detections, iouThreshold);
+            var Predictions = NMS.NonMaximumSuppressionByName(Detections, _iouThreshold);
             var FinalResult = new DetectionResponse()
             {
                 Predictions = Predictions,
@@ -259,11 +261,16 @@ namespace DynamicTileFlow.Controllers
                 ModuleId = string.Join(", ", AllResults.OfType<CodeProjectAIResponse>().Select(a => a.ModuleId).Distinct()),
                 ModuleName = string.Join(", ", AllResults.OfType<CodeProjectAIResponse>().Select(a => a.ModuleName).Distinct()),
                 InferenceDevice = string.Join(", ", AllResults.OfType<CodeProjectAIResponse>().Select(a => a.InferenceDevice).Distinct()),
-
+                ServerName = string.Join(", ", AllResults.OfType<CodeProjectAIResponse>().Select(a => a.ProcessedBy).Distinct())
             };
 
             FinalResult.ProcessMs = (int)ProcessingTime.Elapsed.TotalMilliseconds;
             FinalResult.AnalysisRoundTripMs = (int)TotalTime.Elapsed.TotalMilliseconds;
+
+            LogMessage(GUID + " Processed in " + TotalTime.Elapsed.TotalMilliseconds + "ms, Inference: " + InferenceTime.Elapsed.TotalMilliseconds + "ms, Tiles: " + Tiles.Count + ", Detections: " + FinalResult.Predictions.Count);
+            LogMessage(GUID + " Detected: " + string.Join(", ", FinalResult.Predictions.Select(d => d.Label.Trim()).Distinct().ToList()));
+            LogMessage(GUID + " FinalResult: " + System.Text.Json.JsonSerializer.Serialize(FinalResult));
+
 
             return Ok(FinalResult);
         }
@@ -341,5 +348,20 @@ namespace DynamicTileFlow.Controllers
 
             image.Mutate(ctx => ctx.DrawText(text, font, color, location));
         }
+        public static void LogMessage(string message)
+        {
+            var logPath = Path.Combine(AppContext.BaseDirectory, "logs");
+            if (!Directory.Exists(logPath))
+            {
+                Directory.CreateDirectory(logPath);
+            }
+            var logFile = Path.Combine(logPath, "dynamictileflow.log");
+            using (var writer = new StreamWriter(logFile, append: true))
+            {
+                writer.WriteLine($"{DateTime.Now:yyyy-MM-dd HH:mm:ss} - {message}");
+                writer.Flush();
+                writer.Close();
+            }
+        }       
     }
 }

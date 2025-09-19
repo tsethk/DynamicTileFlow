@@ -25,6 +25,7 @@ namespace DynamicTileFlow.Classes.Servers
         {
             using (var client = new HttpClient())
             {
+                client.Timeout = TimeSpan.FromSeconds(ServerTimeout);       
                 using var imageStream = new MemoryStream();
                 await image.SaveAsJpegAsync(imageStream);
                 imageStream.Seek(0, SeekOrigin.Begin);

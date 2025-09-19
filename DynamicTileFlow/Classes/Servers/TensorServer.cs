@@ -27,6 +27,7 @@ namespace DynamicTileFlow.Classes.Servers
         {
             using (var client = new HttpClient())
             {
+                client.Timeout = TimeSpan.FromSeconds(ServerTimeout);   
                 var tensorDetections = new APIResponse();
 
                 var actualImages = images.Select(i => i.Image).ToList();    

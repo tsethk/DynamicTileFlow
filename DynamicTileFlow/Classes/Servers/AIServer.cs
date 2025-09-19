@@ -112,7 +112,8 @@ namespace DynamicTileFlow.Classes.Servers
         public void Deactivate()
         {
             IsActive = false;
-            AvgRoundTrip = 0;
+            AvgRoundTrip = 999999;
+            
         }
         public void AddRoundTripStat(int milliseconds)
         {
