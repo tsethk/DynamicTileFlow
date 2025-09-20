@@ -22,7 +22,9 @@ namespace DynamicTileFlow.Classes.DynamicTiler
                         tilePlan.Y,
                         tilePlan.Height,
                         tilePlan.ScaleWidth / (float)tilePlan.Width,    
-                        tilePlan.OverlapFactor))
+                        tilePlan.OverlapFactor,
+                        tilePlan.XStartPercent,
+                        tilePlan.XEndPercent))
                 .ToList();
 
             return tiles;
@@ -33,7 +35,9 @@ namespace DynamicTileFlow.Classes.DynamicTiler
             int yStart,
             int height,
             float scale,
-            double overlapFactor)
+            double overlapFactor,
+            double? xStartPercent,
+            double? xEndPercent)
         {
             // Get a list of tiles that will be added to the concurrent bag  
             var newTiles = new List<TileInfo>();
@@ -41,8 +45,22 @@ namespace DynamicTileFlow.Classes.DynamicTiler
             int actualWidthPerTile = (int)(widthPerTile * (1.0d - (2 * overlapFactor)));
             int actualOverlapPixels = (int)(widthPerTile * overlapFactor);
 
+            var xStart = 0;
+
+            if(xStartPercent != null)
+            {
+                xStart = (int)(xStartPercent * source.Width);
+            }
+
+            var xEnd = source.Width;
+
+            if (xEndPercent != null)
+            {
+                xEnd = (int)(xEndPercent * source.Width);  
+            }
+
             // Crop and resize each tile, run until the x of the tile is beyond the width of the image   
-            for (int x = 0; x < source.Width; x += actualWidthPerTile + actualOverlapPixels)
+            for (int x = xStart; x < xEnd; x += actualWidthPerTile + actualOverlapPixels)
             {
                 // Set the width to be the remaining width if we are at the end of the image 
                 var actualWidth = Math.Min(widthPerTile, source.Width - x);

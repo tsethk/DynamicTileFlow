@@ -30,29 +30,68 @@ namespace ImageTilerProcessor
             { 
                 if(TilePlan.ImageWidthExpected <= 0)
                 {
-                    throw new ArgumentOutOfRangeException(nameof(TilePlan.ImageWidthExpected), TilePlan.ImageWidthExpected, $"Dynamic tile plan '{TilePlan.TilePlanName}' must have a positive ImageWidthExpected.");      
+                    throw new ArgumentOutOfRangeException(
+                        nameof(TilePlan.ImageWidthExpected), 
+                        TilePlan.ImageWidthExpected, 
+                        $"Dynamic tile plan '{TilePlan.TilePlanName}' must have a positive ImageWidthExpected.");      
                 }
                 if(TilePlan.ImageHeightExpected <= 0)
                 {
-                    throw new ArgumentOutOfRangeException(nameof(TilePlan.ImageHeightExpected), TilePlan.ImageHeightExpected, $"Dynamic tile plan '{TilePlan.TilePlanName}' must have a positive ImageHeightExpected.");   
+                    throw new ArgumentOutOfRangeException(
+                        nameof(TilePlan.ImageHeightExpected), 
+                        TilePlan.ImageHeightExpected, 
+                        $"Dynamic tile plan '{TilePlan.TilePlanName}' must have a positive ImageHeightExpected.");   
                 }
                 foreach(var plan in TilePlan.TilePlans)
                 {
+                    if(plan.XEndPercent != null && (plan.XEndPercent > 1 || plan.XEndPercent <= 0))
+                    {
+                        throw new ArgumentOutOfRangeException(
+                            nameof(plan.XEndPercent), 
+                            plan.XEndPercent, 
+                            $"Dynamic tile plan '{TilePlan.TilePlanName}' has an X End Percent greater than one or zero or negative.");
+                    }
+                    if(plan.XStartPercent != null && (plan.XStartPercent >= 1 || plan.XStartPercent < 0))
+                    {
+                        throw new ArgumentOutOfRangeException(
+                            nameof(plan.XStartPercent), 
+                            plan.XStartPercent, 
+                            $"Dynamic tile plan '{TilePlan.TilePlanName}' has an X Start Percent greater than or equal to one or negative.");
+                    }  
+                    if(plan.XStartPercent != null && plan.XEndPercent != null && plan.XStartPercent >= plan.XEndPercent)
+                    {
+                        throw new ArgumentOutOfRangeException(
+                            nameof(plan.XStartPercent), 
+                            plan.XStartPercent, 
+                            $"Dynamic tile plan '{TilePlan.TilePlanName}' has an X Start Percent greater than or equal to the X End Percent.");
+                    }
                     if(plan.Height <= 0)
                     {
-                        throw new ArgumentOutOfRangeException(nameof(plan.Height), plan.Height, $"Dynamic tile plan '{TilePlan.TilePlanName}' has a tile plan with non-positive Height.");  
+                        throw new ArgumentOutOfRangeException(
+                            nameof(plan.Height), 
+                            plan.Height, 
+                            $"Dynamic tile plan '{TilePlan.TilePlanName}' has a tile plan with non-positive Height.");  
                     }
                     if(plan.Width <= 0)
                     {
-                        throw new ArgumentOutOfRangeException(nameof(plan.Width), plan.Width, $"Dynamic tile plan '{TilePlan.TilePlanName}' has a tile plan with non-positive Width."); 
+                        throw new ArgumentOutOfRangeException(
+                            nameof(plan.Width), 
+                            plan.Width, 
+                            $"Dynamic tile plan '{TilePlan.TilePlanName}' has a tile plan with non-positive Width."); 
                     }
                     if(plan.OverlapFactor < 0 || plan.OverlapFactor >= 0.5)
                     {
-                        throw new ArgumentOutOfRangeException(nameof(plan.OverlapFactor), plan.OverlapFactor, $"Dynamic tile plan '{TilePlan.TilePlanName}' has a tile plan with OverlapFactor out of range (must be >= 0 and < 0.5).");        
+                        throw new ArgumentOutOfRangeException(
+                            nameof(plan.OverlapFactor), 
+                            plan.OverlapFactor, 
+                            $"Dynamic tile plan '{TilePlan.TilePlanName}' has a tile plan with OverlapFactor out of range (must be >= 0 and < 0.5).");        
                     }
                     if(plan.ScaleWidth <= 0)
                     {
-                        throw new ArgumentOutOfRangeException(nameof(plan.ScaleWidth), plan.ScaleWidth, $"Dynamic tile plan '{TilePlan.TilePlanName}' has a tile plan with non-positive ScaleWidth.");      
+                        throw new ArgumentOutOfRangeException(
+                            nameof(plan.ScaleWidth), 
+                            plan.ScaleWidth, 
+                            $"Dynamic tile plan '{TilePlan.TilePlanName}' has a tile plan with non-positive ScaleWidth.");      
                     }
                 }
             }   
@@ -87,6 +126,8 @@ namespace ImageTilerProcessor
                             nameof(cfg.Port),
                             cfg.Port,
                             $"Value must be between 0 and 65535 for server '{cfg.Name}'.");     
+
+                    
 
                     switch (cfg.Type)
                     {
