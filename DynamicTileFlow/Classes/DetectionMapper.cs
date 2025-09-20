@@ -31,11 +31,10 @@ namespace DynamicTileFlow.Classes
             mapped.Y_min = (int)(det.Y_min * invScale) + tile.YStart;
             mapped.Y_max = (int)(det.Y_max * invScale) + tile.YStart;
 
-            // Put a 10 pixel buffer in there to see if it stops agent DVR from crashing
-            mapped.X_min = Math.Max(10, mapped.X_min);
-            mapped.Y_min = Math.Max(10, mapped.Y_min);
-            mapped.X_max = Math.Min(originalImageWidth - 10, mapped.X_max);
-            mapped.Y_max = Math.Min(originalImageHeight - 10, mapped.Y_max);
+            mapped.X_min = Math.Max(0, mapped.X_min);
+            mapped.Y_min = Math.Max(0, mapped.Y_min);
+            mapped.X_max = Math.Min(originalImageWidth, mapped.X_max);
+            mapped.Y_max = Math.Min(originalImageHeight, mapped.Y_max);
 
             return mapped;
         }
