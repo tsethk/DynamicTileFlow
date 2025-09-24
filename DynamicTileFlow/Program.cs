@@ -79,7 +79,7 @@ namespace ImageTilerProcessor
                             plan.Width, 
                             $"Dynamic tile plan '{TilePlan.TilePlanName}' has a tile plan with non-positive Width."); 
                     }
-                    if(plan.OverlapFactor < 0 || plan.OverlapFactor >= 0.5)
+                    if(plan.OverlapFactor < 0 || plan.OverlapFactor > 0.5)
                     {
                         throw new ArgumentOutOfRangeException(
                             nameof(plan.OverlapFactor), 

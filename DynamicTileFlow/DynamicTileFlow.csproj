@@ -15,6 +15,12 @@
 	</ItemGroup>
 
 	<ItemGroup>
+	  <Content Update="appsettings.json">
+	    <CopyToOutputDirectory>Always</CopyToOutputDirectory>
+	  </Content>
+	</ItemGroup>
+
+	<ItemGroup>
 	  <None Update="LICENSE-ImageSharp.txt">
 	    <CopyToOutputDirectory>Always</CopyToOutputDirectory>
 	  </None>

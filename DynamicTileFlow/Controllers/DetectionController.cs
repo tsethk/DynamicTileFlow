@@ -79,10 +79,11 @@ namespace DynamicTileFlow.Controllers
             [FromQuery] float? resizeRatio = null,
             [FromQuery] bool? includeDetections = null,
             [FromQuery] bool? includeTiles = null,
+            [FromQuery] bool oneColorPerPlan = false,
             [FromQuery] int tileStrategy = 1)
         {
             // Colors to rotate through while drawing boxes
-            var Colors = new List<Color>() {
+            var colors = new List<Color>() {
                 Color.Red,
                 Color.Lime,
                 Color.Blue,
@@ -93,25 +94,25 @@ namespace DynamicTileFlow.Controllers
                 Color.Brown
             };
 
-            var ColorIdx = 0;
+            var colorIdx = 0;
 
             // Get the image from the form 
-            using var ImageActual = SixLabors.ImageSharp.Image.Load<Rgba32>(image.OpenReadStream());
+            using var imageActual = SixLabors.ImageSharp.Image.Load<Rgba32>(image.OpenReadStream());
 
             // Get original width and height
-            var OriginalHeight = ImageActual.Height;
-            var OriginalWidth = ImageActual.Width;
+            var originalHeight = imageActual.Height;
+            var originalWidth = imageActual.Width;
 
 
             // Get the plan referenced by the resize strategy    
-            var Plan = _dynamicTilePlans.Where(d => d.TilePlanId == tileStrategy).FirstOrDefault();
+            var plan = _dynamicTilePlans.Where(d => d.TilePlanId == tileStrategy).FirstOrDefault();
 
-            var Tiles = new List<TileInfo>();
+            var tiles = new List<TileInfo>();
 
-            if (Plan != null)
+            if (plan != null)
             {
                 // Get the list of tiles to be processed based on the plan
-                Tiles = DynamicProcessor.SplitAdaptive(ImageActual, Plan);
+                tiles = DynamicProcessor.SplitAdaptive(imageActual, plan);
             }
             else
             {
@@ -120,72 +121,79 @@ namespace DynamicTileFlow.Controllers
 
             if (includeTiles == true)
             {
-                foreach (var Tile in Tiles)
+                foreach (var tile in tiles)
                 {
                     var rect = new RectangleF(
-                        Tile.XStart,
-                        Tile.YStart,
-                        Tile.Width,
-                        Tile.Height);
+                        tile.XStart + 3,
+                        tile.YStart + 3,
+                        tile.Width - 3,
+                        tile.Height - 3);
+
+                    Color color = colors[colorIdx];
+
+                    if(oneColorPerPlan == true && tile.TilePlanIndex != null)
+                    {
+                        color = colors[tile.TilePlanIndex.Value % colors.Count];
+                    }   
 
                     // Outline pen (red, 3px thick)
-                    var Pen = Pens.Solid(Colors[ColorIdx], 6);
-                    ColorIdx = ++ColorIdx % Colors.Count;
+                    var pen = Pens.Solid(color, 3);
+                    colorIdx = ++colorIdx % colors.Count;
 
                     // Draw rectangle
-                    ImageActual.Mutate(ctx => ctx.Draw(Pen, rect));
+                    imageActual.Mutate(ctx => ctx.Draw(pen, rect));
                 }
             }
 
             if (includeDetections == true)
             {
 
-                var AllResults = await GetDetections(Tiles, _serverList, _minConfidence, OriginalWidth, OriginalHeight);
-                var Detections = AllResults.Select(r => r.Predictions).SelectMany(r => r).ToList();
-                var Predictions = NMS.NonMaximumSuppressionByName(Detections, _iouThreshold);
+                var allResults = await GetDetections(tiles, _serverList, _minConfidence, originalWidth, originalHeight);
+                var detections = allResults.Select(r => r.Predictions).SelectMany(r => r).ToList();
+                var predictions = NMS.NonMaximumSuppressionByName(detections, _iouThreshold);
 
-                foreach (var Prediction in Predictions)
+                foreach (var prediction in predictions)
                 {
                     var rect = new RectangleF(
-                        Prediction.X_min,
-                        Prediction.Y_min,
-                        Prediction.X_max - Prediction.X_min,
-                        Prediction.Y_max - Prediction.Y_min);
+                        prediction.X_min,
+                        prediction.Y_min,
+                        prediction.X_max - prediction.X_min,
+                        prediction.Y_max - prediction.Y_min);
 
                     // Outline pen (red, 3px thick)
-                    var pen = Pens.Solid(Colors[ColorIdx], 12);
-                    ColorIdx = ++ColorIdx % Colors.Count;
+                    var pen = Pens.Solid(colors[colorIdx], 12);
+                    colorIdx = ++colorIdx % colors.Count;
 
                     // Draw rectangle
-                    ImageActual.Mutate(ctx => ctx.Draw(pen, rect));
+                    imageActual.Mutate(ctx => ctx.Draw(pen, rect));
 
-                    var FontSize = 24;
+                    var fontSize = 24;
 
                     if (resizeRatio != null)
                     {
                         // Bad dynamic font sizing, but it works okay for now 
-                        FontSize = (int)(FontSize * (0.5f / resizeRatio));
+                        fontSize = (int)(fontSize * (0.5f / resizeRatio));
                     }
 
                     DrawTextOnImage(
-                        ImageActual,
-                        Prediction.Label + " " + Prediction.Confidence.ToString("0.00"),
-                        Prediction.X_min,
-                        Prediction.Y_min - 30,
-                        FontSize);
+                        imageActual,
+                        prediction.Label + " " + prediction.Confidence.ToString("0.00"),
+                        prediction.X_min,
+                        prediction.Y_min - 30,
+                        fontSize);
                 }
             }
 
             if (resizeRatio != null)
             {
-                var NewWidth = (int)(ImageActual.Width * resizeRatio);
-                var NewHeight = (int)(ImageActual.Height * resizeRatio);
+                var newWidth = (int)(imageActual.Width * resizeRatio);
+                var newHeight = (int)(imageActual.Height * resizeRatio);
 
-                ImageActual.Mutate(ctx => ctx.Resize(NewWidth, NewHeight));
+                imageActual.Mutate(ctx => ctx.Resize(newWidth, newHeight));
             }
 
             var ms = new MemoryStream();
-            ImageActual.Save(ms, new PngEncoder());
+            imageActual.Save(ms, new PngEncoder());
             ms.Position = 0;
 
             // Return as an image/png HTTP response
@@ -196,83 +204,81 @@ namespace DynamicTileFlow.Controllers
             [FromForm(Name = "Image")] IFormFile image,
             [FromQuery] int tileStrategy = 1)
         {
-            var ProcessingTime = new Stopwatch();
-            ProcessingTime.Start();
+            var processingTime = new Stopwatch();
+            processingTime.Start();
             // Start the total time stopwatch   
-            var TotalTime = new Stopwatch();
-            TotalTime.Start();
+            var totalTime = new Stopwatch();
+            totalTime.Start();
 
             // Generate a short unique ID for the request   
-            string GUID = Guid.NewGuid().ToString().Substring(0, 5);
+            string guid = Guid.NewGuid().ToString().Substring(0, 5);
 
             // List of times spent calling the detection servers 
-            var DetectionServerCalls = new ConcurrentBag<Tuple<DateTime, DateTime>>();
+            var detectionServerCalls = new ConcurrentBag<Tuple<DateTime, DateTime>>();
 
             // List of tiles to be returned in the response  
-            var ActualTiles = new List<ResizedTileInfo>();
+            var actualTiles = new List<ResizedTileInfo>();
 
             // Get the image from the form 
-            using var ImageActual = SixLabors.ImageSharp.Image.Load<Rgba32>(image.OpenReadStream());
+            using var imageActual = SixLabors.ImageSharp.Image.Load<Rgba32>(image.OpenReadStream());
 
             // Get original width and height
-            var OriginalHeight = ImageActual.Height;
-            var OriginalWidth = ImageActual.Width;
+            var originalHeight = imageActual.Height;
+            var originalWidth = imageActual.Width;
 
             // Get the plan referenced by the resize strategy    
-            var Plan = _dynamicTilePlans.Where(d => d.TilePlanId == tileStrategy).FirstOrDefault();
+            var plan = _dynamicTilePlans.Where(d => d.TilePlanId == tileStrategy).FirstOrDefault();
 
-            var Tiles = new List<TileInfo>();
+            var tiles = new List<TileInfo>();
 
             // Make sure we have a valid plan   
-            if (Plan != null)
+            if (plan != null)
             {
                 // Get the list of tiles to be processed based on the plan
-                Tiles = DynamicProcessor.SplitAdaptive(ImageActual, Plan);
+                tiles = DynamicProcessor.SplitAdaptive(imageActual, plan);
             }
             else
             {
                 return BadRequest("Invalid tiling strategy");
             }
 
-            var InferenceTime = new Stopwatch();
+            var inferenceTime = new Stopwatch();
 
-            ProcessingTime.Stop();
-            InferenceTime.Start();
+            processingTime.Stop();
+            inferenceTime.Start();
 
-            var AllResults = await GetDetections(Tiles, _serverList, _minConfidence, OriginalWidth, OriginalHeight);
+            var allResults = await GetDetections(tiles, _serverList, _minConfidence, originalWidth, originalHeight);
 
-            ProcessingTime.Start();
-            InferenceTime.Stop();
+            processingTime.Start();
+            inferenceTime.Stop();
 
-            var Detections = AllResults.Select(r => r.Predictions).SelectMany(r => r).ToList();
-            var Predictions = NMS.NonMaximumSuppressionByName(Detections, _iouThreshold);
-            var FinalResult = new DetectionResponse()
+            var detections = allResults.Select(r => r.Predictions).SelectMany(r => r).ToList();
+            var predictions = NMS.NonMaximumSuppressionByName(detections, _iouThreshold);
+            var finalResult = new DetectionResponse()
             {
-                Predictions = Predictions,
+                Predictions = predictions,
                 Code = 200,
                 Command = "detect",
-                ProcessedBy = string.Join(", ", Predictions.Select(p => p.ServerName).Distinct().ToList()),
+                ProcessedBy = string.Join(", ", predictions.Select(p => p.ServerName).Distinct().ToList()),
                 Success = true,
-                Message = "Found " + string.Join(", ", Predictions.Select(d => d.Label.Trim()).Distinct().ToList()),
-                RequestId = GUID,
-                TileCount = Tiles.Count,
-                OriginalImageSize = OriginalWidth.ToString() + "x" + OriginalHeight.ToString(),
-                InferenceMs = (int)InferenceTime.Elapsed.TotalMilliseconds,
-                ModuleId = string.Join(", ", AllResults.OfType<CodeProjectAIResponse>().Select(a => a.ModuleId).Distinct()),
-                ModuleName = string.Join(", ", AllResults.OfType<CodeProjectAIResponse>().Select(a => a.ModuleName).Distinct()),
-                InferenceDevice = string.Join(", ", AllResults.OfType<CodeProjectAIResponse>().Select(a => a.InferenceDevice).Distinct()),
-                ServerName = string.Join(", ", AllResults.OfType<CodeProjectAIResponse>().Select(a => a.ProcessedBy).Distinct())
+                Message = "Found " + string.Join(", ", predictions.Select(d => d.Label.Trim()).Distinct().ToList()),
+                RequestId = guid,
+                TileCount = tiles.Count,
+                OriginalImageSize = originalWidth.ToString() + "x" + originalHeight.ToString(),
+                InferenceMs = (int)inferenceTime.Elapsed.TotalMilliseconds,
+                ModuleId = string.Join(", ", allResults.OfType<CodeProjectAIResponse>().Select(a => a.ModuleId).Distinct()),
+                ModuleName = string.Join(", ", allResults.OfType<CodeProjectAIResponse>().Select(a => a.ModuleName).Distinct()),
+                InferenceDevice = string.Join(", ", allResults.OfType<CodeProjectAIResponse>().Select(a => a.InferenceDevice).Distinct()),
+                ServerName = string.Join(", ", allResults.OfType<CodeProjectAIResponse>().Select(a => a.ProcessedBy).Distinct())
             };
 
-            FinalResult.ProcessMs = (int)ProcessingTime.Elapsed.TotalMilliseconds;
-            FinalResult.AnalysisRoundTripMs = (int)TotalTime.Elapsed.TotalMilliseconds;
+            finalResult.ProcessMs = (int)processingTime.Elapsed.TotalMilliseconds;
+            finalResult.AnalysisRoundTripMs = (int)totalTime.Elapsed.TotalMilliseconds;
 
-            LogMessage(GUID + " Processed in " + TotalTime.Elapsed.TotalMilliseconds + "ms, Inference: " + InferenceTime.Elapsed.TotalMilliseconds + "ms, Tiles: " + Tiles.Count + ", Detections: " + FinalResult.Predictions.Count);
-            LogMessage(GUID + " Detected: " + string.Join(", ", FinalResult.Predictions.Select(d => d.Label.Trim()).Distinct().ToList()));
-            LogMessage(GUID + " FinalResult: " + System.Text.Json.JsonSerializer.Serialize(FinalResult));
+            LogMessage(guid + " Processed in " + totalTime.Elapsed.TotalMilliseconds + "ms, Inference: " + inferenceTime.Elapsed.TotalMilliseconds + "ms, Tiles: " + tiles.Count + ", Detections: " + finalResult.Predictions.Count);
+            LogMessage(guid + " FinalResult: " + System.Text.Json.JsonSerializer.Serialize(finalResult));
 
-
-            return Ok(FinalResult);
+            return Ok(finalResult);
         }
         static public async Task<IEnumerable<APIResponse>> GetDetections(
             List<TileInfo> tiles,
@@ -285,43 +291,43 @@ namespace DynamicTileFlow.Controllers
 
             for (int i = 0; i < tiles.Count; i++)
             {
-                var Tile = tiles[i];
+                var tile = tiles[i];
 
                 var task = Task.Run(async () =>
                 {
-                    APIResponse? Result = null;
-                    AIServer? Server = serverList.GetAIEndpoint();
+                    APIResponse? result = null;
+                    AIServer? server = serverList.GetAIEndpoint();
 
-                    if (Server != null)
+                    if (server != null)
                     {
                         var startCall = DateTime.Now;
 
-                        Result = await Server.SendRequest(Tile.Image);
+                        result = await server.SendRequest(tile.Image);
 
-                        if (Result != null)
+                        if (result != null)
                         {
                             var MappedDetections = new List<DetectionResult>();
-                            if (Result != null)
+                            if (result != null)
                             {
-                                foreach (var Detection in Result.Predictions.Where(p => p.Confidence >= confidenceThreshold))
+                                foreach (var Detection in result.Predictions.Where(p => p.Confidence >= confidenceThreshold))
                                 {
-                                    Detection.ServerName = Server.Name;
+                                    Detection.ServerName = server.Name;
                                     MappedDetections.Add(
-                                        DetectionMapper.MapToFullImage(Detection, Tile, originalWidth, originalHeight));
+                                        DetectionMapper.MapToFullImage(Detection, tile, originalWidth, originalHeight));
                                 }
-                                Result.Predictions = MappedDetections;
+                                result.Predictions = MappedDetections;
                             }
                         }
                     }
-                    return Result ?? new APIResponse() { Predictions = new List<DetectionResult>() };
+                    return result ?? new APIResponse() { Predictions = new List<DetectionResult>() };
                 });
 
                 tasks.Add(task);
             }
 
-            var AllResults = await Task.WhenAll(tasks);
+            var allResults = await Task.WhenAll(tasks);
 
-            return [.. AllResults];
+            return [.. allResults];
         }
         public static void DrawTextOnImage(Image<Rgba32> image, string text, float x, float y, int FontSize)
         {
@@ -336,7 +342,6 @@ namespace DynamicTileFlow.Controllers
             var color = Color.White;
             var location = new PointF(x, y);
 
-
             // Measure text size
             var textOptions = new TextOptions(font);
             var size = TextMeasurer.MeasureSize(text, textOptions);
@@ -345,7 +350,6 @@ namespace DynamicTileFlow.Controllers
             var padding = 4;
             var rect = new RectangleF(x - padding, y - padding, size.Width + padding * 2, size.Height + padding * 2);
             image.Mutate(ctx => ctx.Fill(Color.Black, rect));
-
             image.Mutate(ctx => ctx.DrawText(text, font, color, location));
         }
         public static void LogMessage(string message)

@@ -24,7 +24,8 @@ namespace DynamicTileFlow.Classes.DynamicTiler
                         tilePlan.ScaleWidth / (float)tilePlan.Width,    
                         tilePlan.OverlapFactor,
                         tilePlan.XStartPercent,
-                        tilePlan.XEndPercent))
+                        tilePlan.XEndPercent,
+                        plan.TilePlans.IndexOf(tilePlan)))
                 .ToList();
 
             return tiles;
@@ -37,7 +38,8 @@ namespace DynamicTileFlow.Classes.DynamicTiler
             float scale,
             double overlapFactor,
             double? xStartPercent,
-            double? xEndPercent)
+            double? xEndPercent,
+            int? tilePlanIndex = null)
         {
             // Get a list of tiles that will be added to the concurrent bag  
             var newTiles = new List<TileInfo>();
@@ -87,22 +89,11 @@ namespace DynamicTileFlow.Classes.DynamicTiler
                     Scale = scale,
                     XStart = x,
                     Width = actualWidth,
-                    Height = actualHeight
+                    Height = actualHeight,
+                    TilePlanIndex = tilePlanIndex 
                 });
             }
             return newTiles;
         }
-    }
-    public class TileInfo
-    {
-        public Image<Rgba32> Image { get; set; } = null!;
-        public int YStart { get; set; }
-        public int XStart { get; set; }
-        public int Height { get; set; }
-        public int Width { get; set; }
-        public float Scale { get; set; }
-        public int XEnd => XStart + Width;
-        public int YEnd => YStart + Height;
-        public int ColWidth => Width;
     }
 }

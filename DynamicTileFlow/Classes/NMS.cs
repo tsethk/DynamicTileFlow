@@ -41,10 +41,8 @@ namespace DynamicTileFlow.Processors
                     sortedBoxes = sortedBoxes.Where(box => IoU(current, box) < iouThreshold).ToList();
                 }
             }
-
             return result;
         }
-
         public static List<DetectionResult> MaximumSuppressionByName(List<DetectionResult> boxes, float iouThreshold = 0.5f)
         {
             var result = new List<DetectionResult>();
@@ -71,7 +69,6 @@ namespace DynamicTileFlow.Processors
                             confidence = g.Max(r => r.Confidence)
                         }).FirstOrDefault();
 
-
                     if (parentBox != null)
                     {
                         sortedBoxes.RemoveAll(box => IoU(box, current) > 0.85);
@@ -81,10 +78,8 @@ namespace DynamicTileFlow.Processors
                         current.X_max = parentBox.x_max;
                         current.Confidence = parentBox.confidence;
                     }
-
                 }
             }
-
             return result;
         }
 
@@ -104,6 +99,5 @@ namespace DynamicTileFlow.Processors
 
             return interArea / (areaA + areaB - interArea);
         }
-
     }
 }
