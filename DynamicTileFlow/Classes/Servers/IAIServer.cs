@@ -19,6 +19,7 @@ namespace DynamicTileFlow.Classes.Servers
         public float MovingAverageAlpha { get; set; }
         public int TotalCalls { get; }
         public int ActiveCalls { get; }
+        public int ActiveChecks { get; }
         public bool IsActive { get; }
         public int? MaxBatchSize { get; set; }
         public Task<APIResponse?> SendRequest(Image<Rgba32> Image);
@@ -27,6 +28,8 @@ namespace DynamicTileFlow.Classes.Servers
         Task<APIResponse?> CallAPI(List<ImageBatchItem> Images);
         public void IncrementActiveCalls();
         public void DecrementActiveCalls();
+        public void IncrementActiveChecks();
+        public void DecrementActiveChecks();
         public void Deactivate();
         public void Activate();
         public void CheckStatus();

@@ -16,7 +16,10 @@ namespace DynamicTileFlow.Classes.Servers
             // Check if inactive servers are not active in another thread
             _ = Task.Run(() =>
             {
-                foreach (var server in Servers.Where(s => s.IsActive == false && (s.LastKnownActive == null || (DateTime.Now - s.LastKnownActive!).Value.TotalSeconds > 30)))
+                foreach (var server in Servers
+                    .Where(s => s.IsActive == false && 
+                           s.ActiveChecks == 0 && 
+                           (s.LastKnownActive == null || (DateTime.Now - s.LastKnownActive!).Value.TotalSeconds > 30)))
                 {
                     server.CheckStatus();
                 }

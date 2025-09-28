@@ -75,7 +75,7 @@ namespace DynamicTileFlow.Controllers
         }
         [HttpPost("dynamic-tiler-image")]
         public async Task<IActionResult> DynamicTilerImage(
-            [FromForm(Name ="Image")] IFormFile image,
+            [FromForm(Name = "Image")] IFormFile image,
             [FromQuery] float? resizeRatio = null,
             [FromQuery] bool? includeDetections = null,
             [FromQuery] bool? includeTiles = null,
@@ -124,17 +124,16 @@ namespace DynamicTileFlow.Controllers
                 foreach (var tile in tiles)
                 {
                     var rect = new RectangleF(
-                        tile.XStart + 3,
-                        tile.YStart + 3,
-                        tile.Width - 3,
-                        tile.Height - 3);
+                        tile.XStart,
+                        tile.YStart,
+                        tile.Width,
+                        tile.Height);
 
-                    Color color = colors[colorIdx];
-
-                    if(oneColorPerPlan == true && tile.TilePlanIndex != null)
-                    {
-                        color = colors[tile.TilePlanIndex.Value % colors.Count];
-                    }   
+                    Color color = colors[
+                        oneColorPerPlan == true && tile.TilePlanIndex != null ?
+                            tile.TilePlanIndex.Value % colors.Count :
+                            colorIdx
+                        ];
 
                     // Outline pen (red, 3px thick)
                     var pen = Pens.Solid(color, 3);
@@ -366,6 +365,6 @@ namespace DynamicTileFlow.Controllers
                 writer.Flush();
                 writer.Close();
             }
-        }       
+        }
     }
 }

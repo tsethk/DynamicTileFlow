@@ -8,6 +8,7 @@ namespace DynamicTileFlow.Classes.Servers
     public abstract class AIServer : IAIServer
     {
         private int _activeCalls = 0;
+        private int _currentActiveChecks = 0;
         public int ServerTimeout { get; private set; } = 10;
         public string Endpoint { get; set; }
         public string ServerName { get; set; }
@@ -20,6 +21,7 @@ namespace DynamicTileFlow.Classes.Servers
         public int AvgRoundTrip { get; private set; }
         public int TotalCalls { get; private set; }
         public int ActiveCalls => _activeCalls;
+        public int ActiveChecks => _currentActiveChecks; 
         public bool IsActive { get; private set; } = true;
         public int? MaxBatchSize { get; set; } = null;
         public float MovingAverageAlpha { get; set; }
@@ -104,6 +106,8 @@ namespace DynamicTileFlow.Classes.Servers
         public abstract Task<APIResponse?> CallAPI(List<ImageBatchItem> Images);
         public void IncrementActiveCalls() => Interlocked.Increment(ref _activeCalls);
         public void DecrementActiveCalls() => Interlocked.Decrement(ref _activeCalls);
+        public void IncrementActiveChecks() => Interlocked.Increment(ref _currentActiveChecks);
+        public void DecrementActiveChecks() => Interlocked.Decrement(ref _currentActiveChecks);
         public void Activate()
         {
             IsActive = true;
@@ -129,6 +133,8 @@ namespace DynamicTileFlow.Classes.Servers
         }
         public void CheckStatus()
         {
+            IncrementActiveChecks();
+
             try
             {
                 using (var client = new HttpClient())
@@ -148,6 +154,10 @@ namespace DynamicTileFlow.Classes.Servers
             catch
             {
                 Deactivate();
+            }
+            finally
+            {
+                DecrementActiveChecks();
             }
         }
     }
