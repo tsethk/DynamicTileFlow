@@ -362,8 +362,6 @@ namespace DynamicTileFlow.Controllers
             using (var writer = new StreamWriter(logFile, append: true))
             {
                 writer.WriteLine($"{DateTime.Now:yyyy-MM-dd HH:mm:ss} - {message}");
-                writer.Flush();
-                writer.Close();
             }
         }
     }

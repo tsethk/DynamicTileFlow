@@ -22,6 +22,17 @@ namespace ImageTilerProcessor
             // Learn more about configuring Swagger/OpenAPI at https:// aka.ms/aspnetcore/swashbuckle
             builder.Services.AddEndpointsApiExplorer();
 
+            builder.Services.AddCors(options =>
+            {
+                options.AddPolicy("AllowAll", policy =>
+                {
+                    policy
+                        .AllowAnyOrigin()
+                        .AllowAnyHeader()
+                        .AllowAnyMethod();
+                });
+            });
+
             var DynamicTilePlans = builder.Configuration
                 .GetSection("DynamicTilePlans")
                 .Get<List<DynamicTilePlan>>() ?? new List<DynamicTilePlan>();
@@ -169,6 +180,8 @@ namespace ImageTilerProcessor
             builder.Services.AddSingleton<AIServerList>(new AIServerList(Servers, TimeoutCheck));
 
             var app = builder.Build();
+
+            app.UseCors("AllowAll");
 
             app.UseHttpsRedirection();
 
